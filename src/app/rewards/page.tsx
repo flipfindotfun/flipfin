@@ -20,12 +20,22 @@ import {
   BarChart3,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Medal,
+  Crown,
+  Flame
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+interface LeaderboardEntry {
+  rank: number;
+  wallet: string;
+  points: number;
+  volume: number;
+}
 
 export default function RewardsPage() {
   const { publicKey } = useWallet();
@@ -36,6 +46,10 @@ export default function RewardsPage() {
   const [applyingCode, setApplyingCode] = useState(false);
   const [referralData, setReferralData] = useState<any>(null);
   const [loadingReferrals, setLoadingReferrals] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [leaderboardType, setLeaderboardType] = useState<"points" | "volume">("points");
+  const [userRank, setUserRank] = useState<number | null>(null);
 
   useEffect(() => {
     if (publicKey) {
@@ -48,7 +62,30 @@ export default function RewardsPage() {
         localStorage.removeItem("pendingReferralCode");
       }
     }
+    fetchLeaderboard();
   }, [publicKey]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [leaderboardType]);
+
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const res = await fetch(`/api/leaderboard?type=${leaderboardType}&limit=50`);
+      const data = await res.json();
+      setLeaderboard(data.leaderboard || []);
+      
+      if (publicKey && data.leaderboard) {
+        const rank = data.leaderboard.findIndex((e: LeaderboardEntry) => e.wallet === publicKey);
+        setUserRank(rank >= 0 ? rank + 1 : null);
+      }
+    } catch (err) {
+      console.error("Error fetching leaderboard:", err);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
 
   const fetchReferralData = async () => {
     if (!publicKey) return;
@@ -141,10 +178,10 @@ export default function RewardsPage() {
                 <BarChart3 className="w-3.5 h-3.5" />
                 Volume: ${profile?.total_volume ? Math.floor(profile.total_volume).toLocaleString() : "0"}
               </div>
-              <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-[#02c076]/10 text-[#02c076] rounded-lg text-xs font-bold">
-                <Trophy className="w-3.5 h-3.5" />
-                Rank: Coming Soon
-              </div>
+                <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-[#02c076]/10 text-[#02c076] rounded-lg text-xs font-bold">
+                  <Trophy className="w-3.5 h-3.5" />
+                  Rank: {userRank ? `#${userRank}` : "-"}
+                </div>
             </div>
           </div>
           
@@ -380,11 +417,141 @@ export default function RewardsPage() {
                 </div>
               )}
             </div>
+            </Card>
+          </div>
+
+          {/* Leaderboard Section */}
+          <Card className="bg-[#14191f] border-[#1e2329]">
+            <div className="p-6 border-b border-[#1e2329]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  Leaderboard
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLeaderboardType("points")}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                      leaderboardType === "points"
+                        ? "bg-[#02c076] text-black"
+                        : "bg-[#1e2329] text-gray-400 hover:text-white"
+                    )}
+                  >
+                    Points
+                  </button>
+                  <button
+                    onClick={() => setLeaderboardType("volume")}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                      leaderboardType === "volume"
+                        ? "bg-[#02c076] text-black"
+                        : "bg-[#1e2329] text-gray-400 hover:text-white"
+                    )}
+                  >
+                    Volume
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              {loadingLeaderboard ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#02c076]" />
+                </div>
+              ) : leaderboard.length > 0 ? (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-xs text-gray-500 border-b border-[#1e2329]">
+                      <th className="text-left p-4 font-medium">Rank</th>
+                      <th className="text-left p-4 font-medium">Wallet</th>
+                      <th className="text-right p-4 font-medium">Points</th>
+                      <th className="text-right p-4 font-medium">Volume</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((entry) => {
+                      const isUser = publicKey && entry.wallet === publicKey;
+                      return (
+                        <tr
+                          key={entry.wallet}
+                          className={cn(
+                            "border-b border-[#1e2329] hover:bg-[#1e2329]/50 transition-colors",
+                            isUser && "bg-[#02c076]/5"
+                          )}
+                        >
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              {entry.rank === 1 && (
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
+                                  <Crown className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                              {entry.rank === 2 && (
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center">
+                                  <Medal className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                              {entry.rank === 3 && (
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                                  <Medal className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                              {entry.rank > 3 && (
+                                <span className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-400">
+                                  {entry.rank}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                "text-sm font-mono",
+                                isUser ? "text-[#02c076] font-bold" : "text-gray-300"
+                              )}>
+                                {entry.wallet.slice(0, 4)}...{entry.wallet.slice(-4)}
+                              </span>
+                              {isUser && (
+                                <span className="px-1.5 py-0.5 bg-[#02c076]/10 text-[#02c076] text-[10px] font-bold rounded">
+                                  YOU
+                                </span>
+                              )}
+                              {entry.rank <= 3 && (
+                                <Flame className="w-4 h-4 text-orange-500" />
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className={cn(
+                              "text-sm font-bold tabular-nums",
+                              entry.rank <= 3 ? "text-[#02c076]" : "text-white"
+                            )}>
+                              {Math.floor(entry.points).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className="text-sm text-gray-400 tabular-nums">
+                              ${Math.floor(entry.volume).toLocaleString()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-600 space-y-2">
+                  <Trophy className="w-10 h-10 opacity-20" />
+                  <p className="text-sm">No traders yet. Be the first!</p>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       </div>
-    </div>
-  );
+    );
 }
 
 function RewardCard({ icon, title, value, description }: { 

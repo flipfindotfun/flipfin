@@ -1,112 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TwitterApi } from "twitter-api-v2";
 
-interface BullXTweet {
-  id: string;
-  text: string;
-  user?: {
-    id?: string;
-    name?: string;
-    username?: string;
-    profile_image_url?: string;
-  };
-  author_id?: string;
-  created_at?: string;
-  public_metrics?: {
-    like_count?: number;
-    retweet_count?: number;
-    reply_count?: number;
-    impression_count?: number;
-  };
-  metrics?: {
-    likes?: number;
-    retweets?: number;
-    replies?: number;
-    impressions?: number;
-  };
-  includes?: {
-    media?: Array<{
-      type: string;
-      url?: string;
-      preview_image_url?: string;
-      variants?: Array<{ url?: string }>;
-    }>;
-  };
-  entities?: {
-    urls?: Array<{
-      expanded_url?: string;
-      url?: string;
-    }>;
-  };
-}
+const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 
-async function fetchBullXTweets(): Promise<any[]> {
+const tweetCache = new Map<string, { tweets: any[]; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000;
+
+async function fetchRealTweets(query: string, maxResults: number = 10): Promise<any[]> {
+  if (!BEARER_TOKEN) {
+    console.error("Twitter Bearer Token not configured");
+    return [];
+  }
+
+  const cacheKey = `${query}_${maxResults}`;
+  const cached = tweetCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.tweets;
+  }
+
   try {
-    const res = await fetch('https://api-neo.bullx.io/v2/tweets', {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Origin': 'https://bullx.io',
-        'Referer': 'https://bullx.io/',
-      },
-      next: { revalidate: 60 },
-    });
-    
-    if (!res.ok) {
-      throw new Error(`BullX API failed: ${res.status}`);
-    }
-    
-    const data = await res.json();
-    const rawTweets: BullXTweet[] = data.data || data.tweets || data || [];
-    
-    return rawTweets.map((t: BullXTweet) => {
-      let media: any[] = [];
-      
-      if (t.includes?.media) {
-        t.includes.media.forEach((m: any) => {
-          media.push({
-            type: m.type,
-            url: m.url || m.variants?.[0]?.url,
-            previewUrl: m.preview_image_url
-          });
-        });
-      } else if (t.entities?.urls) {
-        t.entities.urls.forEach((urlObj: any) => {
-          const expanded = urlObj.expanded_url || urlObj.url;
-          if (expanded?.includes('pbs.twimg.com/media')) {
-            const mediaMatch = expanded.match(/\/media\/([^?]+)/);
-            if (mediaMatch) {
-              const mediaId = mediaMatch[1];
-              media.push({
-                type: 'photo',
-                url: `https://pbs.twimg.com/media/${mediaId}?format=png&name=large`
-              });
-            }
-          }
-        });
-      }
+    const client = new TwitterApi(BEARER_TOKEN);
+    const v2Client = client.v2;
 
+    const searchQuery = `${query} -is:retweet lang:en`;
+    
+    const { data: tweets, includes } = await v2Client.search(searchQuery, {
+      "tweet.fields": ["created_at", "author_id", "public_metrics"],
+      expansions: ["author_id"],
+      "user.fields": ["name", "username", "profile_image_url"],
+      max_results: Math.min(maxResults, 100),
+      sort_order: "recency",
+    });
+
+    if (!tweets || tweets.length === 0) {
+      return [];
+    }
+
+    const usersMap = new Map<string, any>();
+    if (includes?.users) {
+      for (const user of includes.users) {
+        usersMap.set(user.id, user);
+      }
+    }
+
+    const result = tweets.map((tweet: any) => {
+      const author = usersMap.get(tweet.author_id);
       return {
-        id: t.id,
-        text: t.text,
+        id: tweet.id,
+        text: tweet.text,
         author: {
-          id: t.user?.id || t.author_id || '',
-          name: t.user?.name || 'Crypto Trader',
-          username: t.user?.username || 'anonymous',
-          profileImageUrl: t.user?.profile_image_url?.replace('_normal', '_bigger') || 
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.user?.username || t.id}&backgroundColor=1e2329`,
+          id: tweet.author_id || "",
+          name: author?.name || "Crypto Trader",
+          username: author?.username || "anonymous",
+          profileImageUrl: author?.profile_image_url?.replace("_normal", "_bigger") ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${author?.username || tweet.id}&backgroundColor=1e2329`,
         },
-        createdAt: t.created_at || new Date().toISOString(),
+        createdAt: tweet.created_at || new Date().toISOString(),
         metrics: {
-          likes: t.public_metrics?.like_count || t.metrics?.likes || Math.floor(Math.random() * 500),
-          retweets: t.public_metrics?.retweet_count || t.metrics?.retweets || Math.floor(Math.random() * 100),
-          replies: t.public_metrics?.reply_count || t.metrics?.replies || Math.floor(Math.random() * 50),
-          impressions: t.public_metrics?.impression_count || t.metrics?.impressions || Math.floor(Math.random() * 10000),
+          likes: tweet.public_metrics?.like_count || 0,
+          retweets: tweet.public_metrics?.retweet_count || 0,
+          replies: tweet.public_metrics?.reply_count || 0,
+          impressions: tweet.public_metrics?.impression_count || 0,
         },
-        media: media.length > 0 ? media : undefined,
       };
     });
-  } catch (err) {
-    console.error('BullX fetch error:', err);
+
+    tweetCache.set(cacheKey, { tweets: result, timestamp: Date.now() });
+    return result;
+  } catch (err: any) {
+    console.error("Twitter API error:", err.code, err.data || err.message);
+    const cached = tweetCache.get(cacheKey);
+    if (cached) {
+      return cached.tweets;
+    }
     return [];
   }
 }
@@ -161,38 +127,16 @@ function generateFallbackTweets(query: string): any[] {
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const query = searchParams.get("query") || "solana memecoin";
+  const query = searchParams.get("query") || searchParams.get("q") || "solana memecoin";
   const token = searchParams.get("token");
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 50);
 
   try {
-    let tweets = await fetchBullXTweets();
+    const searchTerm = token ? `$${token} OR ${token}` : query;
+    let tweets = await fetchRealTweets(searchTerm, limit);
     
     if (tweets.length === 0) {
       tweets = generateFallbackTweets(token || query);
-    } else {
-      const cryptoKeywords = ['crypto', 'bitcoin', 'ethereum', 'solana', 'blockchain', 'token', 'nft', 'defi', 'web3', 'meme', 'pump', 'moon', 'ape'];
-      
-      tweets = tweets.filter(tweet => {
-        const text = tweet.text?.toLowerCase() || '';
-        return cryptoKeywords.some(keyword => text.includes(keyword));
-      });
-      
-      if (token) {
-        const tokenLower = token.toLowerCase();
-        const tokenFiltered = tweets.filter(tweet => {
-          const text = tweet.text?.toLowerCase() || '';
-          return text.includes(tokenLower) || text.includes(`$${tokenLower}`);
-        });
-        
-        if (tokenFiltered.length >= 3) {
-          tweets = tokenFiltered;
-        }
-      }
-      
-      if (tweets.length < 5) {
-        tweets = [...tweets, ...generateFallbackTweets(token || query).slice(0, 5 - tweets.length)];
-      }
     }
 
     tweets = tweets.slice(0, limit);

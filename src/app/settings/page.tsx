@@ -153,9 +153,6 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500">
             A 0.5% fee is applied to all trades. This helps maintain the platform and fund development.
           </p>
-          <p className="text-xs text-gray-600 mt-2 font-mono break-all">
-            Fee Wallet: 822nLMadem89qc3dyXrKkarrvKPxV1hZyDZokAQ3Z1FX
-          </p>
         </div>
 
         {/* Actions */}

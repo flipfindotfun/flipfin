@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-const JUPITER_API_BASE = "https://public.jupiterapi.com";
+const JUPITER_ULTRA_API = "https://api.jup.ag/ultra/v1";
 const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY;
-const FEE_ACCOUNT = "822nLMadem89qc3dyXrKkarrvKPxV1hZyDZokAQ3Z1FX";
+const REFERRAL_FEE_BPS = 50;
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { quoteResponse, userPublicKey } = body;
+    const { signedTransaction, requestId, walletAddress, inputAmount, outputAmount, inputMint, outputMint } = body;
 
-    if (!quoteResponse || !userPublicKey) {
+    if (!signedTransaction || !requestId) {
       return NextResponse.json(
-        { error: "quoteResponse and userPublicKey are required" },
+        { error: "signedTransaction and requestId are required" },
         { status: 400 }
       );
     }
@@ -25,42 +31,56 @@ export async function POST(request: NextRequest) {
       headers["x-api-key"] = JUPITER_API_KEY;
     }
 
-      const swapRequestBody: Record<string, any> = {
-        quoteResponse,
-        userPublicKey,
-        wrapAndUnwrapSol: true,
-        dynamicComputeUnitLimit: true,
-        prioritizationFeeLamports: "auto",
-        dynamicSlippage: {
-          minBps: 50,
-          maxBps: 300,
-        },
-      };
+    console.log("Executing Jupiter Ultra swap, requestId:", requestId);
 
-    if (quoteResponse.platformFee && Number(quoteResponse.platformFee.feeBps) > 0) {
-      swapRequestBody.feeAccount = FEE_ACCOUNT;
-    }
-
-    console.log("Fetching Jupiter swap tx for:", userPublicKey);
-
-    const response = await fetch(`${JUPITER_API_BASE}/swap`, {
+    const response = await fetch(`${JUPITER_ULTRA_API}/execute`, {
       method: "POST",
       headers,
-      body: JSON.stringify(swapRequestBody),
+      body: JSON.stringify({
+        signedTransaction,
+        requestId,
+      }),
     });
 
     const data = await response.json();
 
-    if (data.error) {
-      console.error("Jupiter swap error:", data.error);
-      return NextResponse.json({ error: data.error }, { status: 400 });
+    console.log("Jupiter Ultra execute response:", JSON.stringify(data));
+
+    if (data.status === "Failed") {
+      console.error("Jupiter swap failed:", data);
+      return NextResponse.json({ error: data.error || "Swap failed" }, { status: 400 });
+    }
+
+    if (data.status === "Success" && walletAddress && outputAmount) {
+      try {
+        const SOL_MINT = "So11111111111111111111111111111111111111112";
+        const isOutputSol = outputMint === SOL_MINT;
+        const outputAmountNum = Number(outputAmount);
+        const feeAmount = (outputAmountNum * REFERRAL_FEE_BPS) / 10000;
+        const feeToken = isOutputSol ? "SOL" : outputMint?.slice(0, 8) || "TOKEN";
+        const decimals = isOutputSol ? 9 : 6;
+        const feeInToken = feeAmount / Math.pow(10, decimals);
+
+        await supabase.from("collected_fees").insert({
+          wallet_address: walletAddress,
+          fee_amount: feeInToken,
+          fee_token: feeToken,
+          status: "collected",
+          collected_at: new Date().toISOString(),
+          tx_hash: data.signature || null,
+        });
+
+        console.log(`Fee recorded: ${feeInToken} ${feeToken} from ${walletAddress}`);
+      } catch (feeErr) {
+        console.error("Failed to record fee:", feeErr);
+      }
     }
 
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("Jupiter swap error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create swap transaction" },
+      { error: error.message || "Failed to execute swap" },
       { status: 500 }
     );
   }

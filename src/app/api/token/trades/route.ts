@@ -3,168 +3,105 @@ import axios from "axios";
 
 export const dynamic = "force-dynamic";
 
-const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
-const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
-  const limit = parseInt(searchParams.get("limit") || "30");
+  const poolAddress = searchParams.get("pool");
 
-  if (!address) {
-    return NextResponse.json({ error: "Token address is required" }, { status: 400 });
-  }
-
-  if (HELIUS_API_KEY) {
-    try {
-      const response = await axios.get(
-        `https://api.helius.xyz/v0/addresses/${address}/transactions`,
-        {
-          params: {
-            "api-key": HELIUS_API_KEY,
-            type: "SWAP",
-            limit: Math.min(limit, 50),
-          },
-          timeout: 15000,
-        }
-      );
-
-      const txs = response.data || [];
-      
-      const mappedTrades = txs.map((tx: any, i: number) => {
-        const tokenTransfers = tx.tokenTransfers || [];
-        const nativeTransfers = tx.nativeTransfers || [];
-        
-        const tokenTransfer = tokenTransfers.find((t: any) => t.mint === address);
-        const solTransfer = nativeTransfers.find((t: any) => Math.abs(t.amount) > 0);
-        
-        const isBuy = tokenTransfer?.toUserAccount && tokenTransfers.some((t: any) => 
-          t.mint === address && t.toUserAccount
-        );
-        
-        const tokenAmount = Math.abs(tokenTransfer?.tokenAmount || 0);
-        const solAmount = Math.abs((solTransfer?.amount || 0) / 1e9);
-        
-        return {
-          id: tx.signature || i,
-          txHash: tx.signature,
-          blockTime: tx.timestamp,
-          age: formatAge(tx.timestamp),
-          type: isBuy ? "buy" : "sell",
-          price: tokenAmount > 0 ? (solAmount / tokenAmount) : 0,
-          amount: tokenAmount,
-          amountUsd: solAmount * 240,
-          mcap: "-",
-          maker: tx.feePayer ? shortenAddress(tx.feePayer) : "Unknown",
-          makerFull: tx.feePayer,
-        };
-      }).filter((t: any) => t.amount > 0);
-
-      return NextResponse.json({ 
-        trades: mappedTrades,
-        source: "helius",
-        total: mappedTrades.length 
-      });
-    } catch (error: any) {
-      console.error("Helius trades error:", error.response?.data || error.message);
-    }
-  }
-
-  if (BIRDEYE_API_KEY) {
-    try {
-      const response = await axios.get(
-        `https://public-api.birdeye.so/defi/txs/token`,
-        {
-          params: {
-            address: address,
-            tx_type: "swap",
-            limit: limit,
-          },
-          headers: {
-            "X-API-KEY": BIRDEYE_API_KEY,
-            "x-chain": "solana",
-          },
-          timeout: 10000,
-        }
-      );
-
-      const trades = response.data?.data?.items || [];
-      
-      const mappedTrades = trades.map((t: any, i: number) => ({
-        id: t.txHash || i,
-        txHash: t.txHash,
-        blockTime: t.blockUnixTime,
-        age: formatAge(t.blockUnixTime),
-        type: t.side?.toLowerCase() || (t.from?.symbol === "SOL" ? "buy" : "sell"),
-        price: t.price || 0,
-        amount: t.amount || 0,
-        amountUsd: t.volumeUSD || 0,
-        mcap: formatNumber(t.mc || 0),
-        maker: t.owner ? shortenAddress(t.owner) : "Unknown",
-        makerFull: t.owner,
-      }));
-
-      return NextResponse.json({ 
-        trades: mappedTrades,
-        source: "birdeye",
-        total: trades.length 
-      });
-    } catch (error: any) {
-      console.error("Birdeye trades error:", error.response?.data || error.message);
-    }
+  if (!address && !poolAddress) {
+    return NextResponse.json({ error: "Token or pool address is required" }, { status: 400 });
   }
 
   try {
-    const pairRes = await axios.get(
-      `https://api.dexscreener.com/tokens/v1/solana/${address}`,
-      { timeout: 10000 }
+    let pool = poolAddress;
+    
+    if (!pool && address) {
+      const pairRes = await axios.get(
+        `https://api.dexscreener.com/tokens/v1/solana/${address}`,
+        { timeout: 10000 }
+      );
+      const pairs = pairRes.data;
+      if (Array.isArray(pairs) && pairs.length > 0) {
+        const mainPair = pairs.sort((a: any, b: any) => 
+          (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+        )[0];
+        pool = mainPair.pairAddress;
+      }
+    }
+
+    if (!pool) {
+      return NextResponse.json({ trades: [], error: "Could not find pool address" });
+    }
+
+    const geckoRes = await axios.get(
+      `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pool}/trades`,
+      {
+        params: {
+          trade_volume_in_usd_greater_than: 0,
+        },
+        headers: {
+          Accept: "application/json",
+        },
+        timeout: 15000,
+      }
     );
 
-    const pairs = pairRes.data;
-    if (Array.isArray(pairs) && pairs.length > 0) {
-      const mainPair = pairs.sort((a: any, b: any) => 
-        (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-      )[0];
-
-      const currentPrice = parseFloat(mainPair.priceUsd) || 0;
+    const tradesData = geckoRes.data?.data || [];
+    
+    const mappedTrades = tradesData.map((trade: any, i: number) => {
+      const attrs = trade.attributes || {};
+      const isBuy = attrs.kind === "buy";
       
-      return NextResponse.json({
-        trades: [],
-        pairInfo: {
-          price: currentPrice,
-          priceChange24h: mainPair.priceChange?.h24 || 0,
-          volume24h: mainPair.volume?.h24 || 0,
-          liquidity: mainPair.liquidity?.usd || 0,
-        },
-        source: "dexscreener",
-        message: "Real-time trades require Helius/Birdeye API"
-      });
-    }
-  } catch (error: any) {
-    console.error("DexScreener error:", error.message);
-  }
+      const blockTimestamp = attrs.block_timestamp 
+        ? new Date(attrs.block_timestamp).getTime() / 1000 
+        : Date.now() / 1000;
+      
+      const tokenAmount = isBuy 
+        ? parseFloat(attrs.to_token_amount) || 0
+        : parseFloat(attrs.from_token_amount) || 0;
+      
+      const volumeUsd = parseFloat(attrs.volume_in_usd) || 0;
+      
+      return {
+        id: trade.id || i,
+        txHash: attrs.tx_hash,
+        blockTime: blockTimestamp,
+        age: formatAge(blockTimestamp),
+        type: isBuy ? "buy" : "sell",
+        price: isBuy ? parseFloat(attrs.price_to_in_usd) || 0 : parseFloat(attrs.price_from_in_usd) || 0,
+        amount: tokenAmount,
+        amountUsd: volumeUsd,
+        maker: attrs.tx_from_address ? shortenAddress(attrs.tx_from_address) : "Unknown",
+        makerFull: attrs.tx_from_address,
+      };
+    });
 
-  return NextResponse.json({ 
-    trades: [],
-    error: "Could not fetch trades" 
-  });
+    return NextResponse.json({ 
+      trades: mappedTrades,
+      source: "geckoterminal",
+      pool: pool,
+      total: mappedTrades.length 
+    });
+
+  } catch (error: any) {
+    console.error("GeckoTerminal trades error:", error.response?.data || error.message);
+    
+    return NextResponse.json({ 
+      trades: [],
+      error: "Could not fetch trades from GeckoTerminal" 
+    });
+  }
 }
 
 function formatAge(unixTime: number): string {
   const now = Math.floor(Date.now() / 1000);
   const diff = now - unixTime;
   
-  if (diff < 60) return `${diff}s`;
+  if (diff < 0) return "0s";
+  if (diff < 60) return `${Math.floor(diff)}s`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
   return `${Math.floor(diff / 86400)}d`;
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
-  return `$${num.toFixed(2)}`;
 }
 
 function shortenAddress(address: string): string {

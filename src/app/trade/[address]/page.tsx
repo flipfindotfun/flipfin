@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Share2, Copy, ExternalLink, Loader2,
-  CheckCircle, AlertTriangle, RefreshCw, Wallet, Star, Eye
+  CheckCircle, AlertTriangle, RefreshCw, Wallet, Star, Settings,
+  Globe, MessageCircle, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,10 @@ export default function TradePage() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [buyAmount, setBuyAmount] = useState("0.1");
   const [sellPercent, setSellPercent] = useState(100);
+  const [sellMode, setSellMode] = useState<"percent" | "custom">("percent");
+  const [customSellAmount, setCustomSellAmount] = useState("");
+  const [slippage, setSlippage] = useState(settings.slippagePercent || 1);
+  const [showSlippageInput, setShowSlippageInput] = useState(false);
   const [isTrading, setIsTrading] = useState(false);
   
   const [trades, setTrades] = useState<any[]>([]);
@@ -48,16 +53,20 @@ export default function TradePage() {
   const [holdersLoading, setHoldersLoading] = useState(false);
   const [holdersCount, setHoldersCount] = useState(0);
   const [quoteInfo, setQuoteInfo] = useState<{ outAmount: string; priceImpact: string } | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
+    const [quoteLoading, setQuoteLoading] = useState(false);
+    const [quoteError, setQuoteError] = useState<string | null>(null);
+    const [tokenSocials, setTokenSocials] = useState<{ website?: string; twitter?: string; telegram?: string }>({});
+    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [tokenBanner, setTokenBanner] = useState<string | null>(null);
 
-  const fetchToken = useCallback(async () => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
+  const fetchToken = useCallback(async (isRefresh = false) => {
+    if (!isRefresh && fetchedRef.current) return;
+    if (!isRefresh) fetchedRef.current = true;
     
-    setLoading(true);
+    if (!isRefresh) setLoading(true);
     const existing = tokens.find(t => t.address === address);
-    if (existing) {
+    if (existing && !isRefresh) {
       setToken(existing);
       setLoading(false);
       return;
@@ -67,12 +76,26 @@ export default function TradePage() {
       const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`);
       const pairs = await res.json();
       
-      if (Array.isArray(pairs) && pairs.length > 0) {
-        const mainPair = pairs.sort((a: any, b: any) => 
-          (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-        )[0];
-        
-        setToken({
+        if (Array.isArray(pairs) && pairs.length > 0) {
+          const mainPair = pairs.sort((a: any, b: any) => 
+            (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+          )[0];
+          
+          if (mainPair.info?.socials) {
+            const socials: any = {};
+            mainPair.info.socials.forEach((s: any) => {
+              if (s.type === "twitter") socials.twitter = s.url;
+              if (s.type === "telegram") socials.telegram = s.url;
+            });
+            if (mainPair.info.websites?.[0]) socials.website = mainPair.info.websites[0].url;
+            setTokenSocials(socials);
+          }
+
+          if (mainPair.info?.header) {
+            setTokenBanner(mainPair.info.header);
+          }
+          
+          setToken({
           address: mainPair.baseToken.address,
           symbol: mainPair.baseToken.symbol,
           name: mainPair.baseToken.name,
@@ -126,11 +149,57 @@ export default function TradePage() {
     setHoldersLoading(false);
   }, [address]);
 
+  const fetchAiAnalysis = useCallback(async () => {
+    if (!token || aiAnalysis) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: {
+            symbol: token.symbol,
+            name: token.name,
+            price: token.price,
+            priceChange24h: token.priceChange24h,
+            volume24h: token.volume24h,
+            liquidity: token.liquidity,
+            marketCap: token.marketCap,
+            holders: holdersCount,
+            top10Percent: holders.slice(0, 10).reduce((sum, h) => sum + (h.percentage || 0), 0),
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.analysis) {
+        setAiAnalysis(data.analysis);
+      }
+    } catch (e) {
+      console.error("AI analysis error:", e);
+    }
+    setAiLoading(false);
+  }, [token, aiAnalysis, holdersCount, holders]);
+
   useEffect(() => {
     fetchToken();
     fetchTrades();
     fetchHolders();
   }, []);
+  
+    useEffect(() => {
+      const interval = setInterval(() => {
+        fetchTrades();
+        fetchToken(true);
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }, [address, fetchTrades, fetchToken]);
+
+  useEffect(() => {
+    if (token && holdersCount > 0 && !aiAnalysis && !aiLoading) {
+      fetchAiAnalysis();
+    }
+  }, [token, holdersCount, fetchAiAnalysis]);
 
   const fetchQuote = useCallback(async () => {
     if (!token) return;
@@ -160,11 +229,22 @@ export default function TradePage() {
         }
         inputMint = token.address;
         outputMint = SOL_MINT;
-        const sellAmount = (position.uiBalance * sellPercent) / 100;
+        
+        let sellAmount: number;
+        if (sellMode === "custom" && customSellAmount) {
+          sellAmount = parseFloat(customSellAmount);
+          if (isNaN(sellAmount) || sellAmount <= 0) {
+            setQuoteLoading(false);
+            return;
+          }
+          sellAmount = Math.min(sellAmount, position.uiBalance);
+        } else {
+          sellAmount = (position.uiBalance * sellPercent) / 100;
+        }
         rawAmount = Math.floor(sellAmount * Math.pow(10, position.decimals || 9));
       }
 
-      const quote = await getQuote(inputMint, outputMint, rawAmount, settings.slippagePercent * 100);
+      const quote = await getQuote(inputMint, outputMint, rawAmount);
       
       if (quote && !quote.error) {
         const outDecimals = activeTab === "buy" ? (token.decimals || 9) : 9;
@@ -181,7 +261,7 @@ export default function TradePage() {
     } finally {
       setQuoteLoading(false);
     }
-  }, [token, buyAmount, activeTab, sellPercent, position, getQuote, settings.slippagePercent]);
+  }, [token, buyAmount, activeTab, sellPercent, sellMode, customSellAmount, position, getQuote]);
 
   useEffect(() => {
     const debounce = setTimeout(fetchQuote, 500);
@@ -225,13 +305,29 @@ export default function TradePage() {
         }
         inputMint = token.address;
         outputMint = SOL_MINT;
-        const sellAmount = (position.uiBalance * sellPercent) / 100;
+        
+        let sellAmount: number;
+        if (sellMode === "custom" && customSellAmount) {
+          sellAmount = parseFloat(customSellAmount);
+          if (isNaN(sellAmount) || sellAmount <= 0) {
+            toast.error("Enter valid sell amount");
+            setIsTrading(false);
+            return;
+          }
+          if (sellAmount > position.uiBalance) {
+            toast.error("Amount exceeds balance");
+            setIsTrading(false);
+            return;
+          }
+        } else {
+          sellAmount = (position.uiBalance * sellPercent) / 100;
+        }
         rawAmount = Math.floor(sellAmount * Math.pow(10, position.decimals || 9));
         displayAmount = sellAmount;
       }
 
       toast.loading("Getting quote...");
-      const quote = await getQuote(inputMint, outputMint, rawAmount, settings.slippagePercent * 100);
+      const quote = await getQuote(inputMint, outputMint, rawAmount);
       
       if (!quote || quote.error) {
         toast.dismiss();
@@ -362,14 +458,29 @@ export default function TradePage() {
           <span className="text-[9px] sm:text-[10px] font-mono">{shortAddress}</span>
         </div>
 
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-yellow-500">
-            <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          </button>
-          <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
-            <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          </button>
-        </div>
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            {tokenSocials.twitter && (
+              <a href={tokenSocials.twitter} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#1DA1F2]" title="Twitter/X">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </a>
+            )}
+            {tokenSocials.telegram && (
+              <a href={tokenSocials.telegram} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#0088cc]" title="Telegram">
+                <MessageCircle className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {tokenSocials.website && (
+              <a href={tokenSocials.website} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white" title="Website">
+                <Globe className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-yellow-500">
+              <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+            <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
+              <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+          </div>
 
         <div className="flex-1 min-w-0" />
 
@@ -399,126 +510,125 @@ export default function TradePage() {
         </div>
       </div>
 
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          <div className="flex-1 flex flex-col min-w-0 min-h-0 order-2 lg:order-1">
-              <div className="flex-1 min-h-[180px] sm:min-h-[250px] lg:min-h-[300px]">
-                    <BirdeyeChart 
-                      symbol={token.symbol} 
-                      tokenAddress={token.address}
-                    />
-                  </div>
-
-            <div className="border-t border-[#1e2329] hidden lg:block">
-              <div className="flex items-center gap-1 px-2 sm:px-3 py-1.5 border-b border-[#1e2329] overflow-x-auto no-scrollbar">
-                {[
-                  { id: "trades", label: "Trades" },
-                  { id: "positions", label: "Positions" },
-                  { id: "holders", label: `Holders ${holdersCount}` },
-                  { id: "topTraders", label: "Top" },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTradeTab(tab.id as TradeTab)}
-                    className={cn(
-                      "px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded whitespace-nowrap transition-all",
-                      activeTradeTab === tab.id
-                        ? "bg-[#1e2329] text-white"
-                        : "text-gray-500 hover:text-white"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-                <div className="flex-1" />
-                <button 
-                  onClick={() => { fetchTrades(); refetchPosition(); }}
-                  className="p-1.5 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white flex-shrink-0"
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+          <div className="h-[50%] min-h-[300px]">
+            <BirdeyeChart 
+              symbol={token.symbol} 
+              tokenAddress={token.address}
+            />
+          </div>
+          
+          <div className="h-[50%] min-h-[200px] border-t border-[#1e2329] flex flex-col bg-[#0b0e11]">
+            <div className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 border-b border-[#1e2329] overflow-x-auto no-scrollbar flex-shrink-0">
+              {[
+                { id: "trades", label: "Trades" },
+                { id: "positions", label: "Positions" },
+                { id: "holders", label: `Holders` },
+                { id: "topTraders", label: "Top" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTradeTab(tab.id as TradeTab)}
+                  className={cn(
+                    "px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded whitespace-nowrap transition-all",
+                    activeTradeTab === tab.id
+                      ? "bg-[#1e2329] text-white"
+                      : "text-gray-500 hover:text-white"
+                  )}
                 >
-                  <RefreshCw className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", tradesLoading && "animate-spin")} />
+                  {tab.label}
                 </button>
-              </div>
+              ))}
+              <div className="flex-1" />
+              <button 
+                onClick={() => { fetchTrades(); refetchPosition(); }}
+                className="p-1.5 sm:p-2 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white flex-shrink-0"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", tradesLoading && "animate-spin")} />
+              </button>
+            </div>
 
-              <div className="h-[140px] sm:h-[180px] overflow-y-auto">
-                {activeTradeTab === "trades" && <TradesTable trades={trades} loading={tradesLoading} />}
-                {activeTradeTab === "positions" && (
-                  <PositionDisplay 
-                    position={position} 
-                    loading={positionLoading} 
-                    token={token}
-                    publicKey={publicKey}
-                  />
-                )}
-                {activeTradeTab === "holders" && <HoldersTable holders={holders} loading={holdersLoading} />}
-                {activeTradeTab === "topTraders" && <HoldersTable holders={holders.slice(0, 10)} loading={holdersLoading} />}
-              </div>
+            <div className="flex-1 overflow-y-auto">
+              {activeTradeTab === "trades" && <TradesTable trades={trades} loading={tradesLoading} />}
+              {activeTradeTab === "positions" && (
+                <PositionDisplay 
+                  position={position} 
+                  loading={positionLoading} 
+                  token={token}
+                  publicKey={publicKey}
+                />
+              )}
+              {activeTradeTab === "holders" && <HoldersTable holders={holders} loading={holdersLoading} />}
+              {activeTradeTab === "topTraders" && <HoldersTable holders={holders.slice(0, 10)} loading={holdersLoading} />}
             </div>
           </div>
+        </div>
 
-<div className="w-full lg:w-[280px] xl:w-[320px] flex flex-col border-t lg:border-t-0 lg:border-l border-[#1e2329] bg-[#0b0e11] order-1 lg:order-2 overflow-y-auto">
-            <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-[#1e2329]">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-[10px] text-gray-500">Price</p>
-                  <p className="text-sm font-bold text-white">${formatPrice(token.price)}</p>
+        <div className="w-full lg:w-[320px] xl:w-[380px] flex-shrink-0 border-t lg:border-t-0 lg:border-l border-[#1e2329] bg-[#0b0e11] overflow-y-auto flex flex-col max-h-[50vh] lg:max-h-none">
+            {tokenBanner && (
+              <div className="relative w-full h-20 sm:h-24 overflow-hidden">
+                <img 
+                  src={tokenBanner} 
+                  alt={`${token.symbol} banner`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e11] to-transparent" />
+              </div>
+            )}
+            
+            <div className={cn(
+              "flex items-center gap-3 px-3 py-2 border-b border-[#1e2329]",
+              tokenBanner && "-mt-8 relative z-10"
+            )}>
+              {token.logoURI ? (
+                <img 
+                  src={token.logoURI} 
+                  alt={token.symbol} 
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#1e2329] bg-[#0b0e11]" 
+                />
+              ) : (
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#02c076] flex items-center justify-center text-sm font-bold text-black border-2 border-[#1e2329]">
+                  {token.symbol.slice(0, 2)}
                 </div>
-                <div className={cn(
-                  "text-sm font-bold",
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white text-sm sm:text-base truncate">{token.symbol}</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 truncate">{token.name}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-white text-sm">${formatPrice(token.price)}</p>
+                <p className={cn(
+                  "text-[10px] font-bold",
                   isPositive ? "text-[#02c076]" : "text-[#f6465d]"
                 )}>
                   {isPositive ? "+" : ""}{token.priceChange24h.toFixed(2)}%
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-gray-500">Balance</p>
-                <p className="text-sm font-bold text-white">{balance.toFixed(4)} SOL</p>
+                </p>
               </div>
             </div>
-            <div className="hidden lg:grid grid-cols-5 gap-px border-b border-[#1e2329] bg-[#1e2329]">
-              {[
-                { label: "1m", change: token.priceChange24h * 0.08 },
-                { label: "5m", change: token.priceChange24h * 0.15 },
-                { label: "1h", change: token.priceChange24h * 0.4 },
-                { label: "24h", change: token.priceChange24h },
-              ].map((item) => (
-                <div key={item.label} className="text-center py-1.5 bg-[#0b0e11]">
-                  <p className="text-[9px] text-gray-500">{item.label}</p>
-                  <p className={cn(
-                    "text-[10px] font-bold",
-                    item.change >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
-                  )}>{item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%</p>
-                </div>
-              ))}
-              <div className="text-center py-1.5 bg-[#0b0e11]">
-                <p className="text-[9px] text-gray-500">Vol</p>
-                <p className="text-[10px] text-white font-bold">${formatNumber(token.volume24h)}</p>
-              </div>
-              </div>
 
-              <div className="hidden lg:grid grid-cols-5 gap-px border-b border-[#1e2329] bg-[#1e2329] text-[9px]">
-                <div className="text-center py-1.5 bg-[#0b0e11]">
-                  <span className="text-gray-500">Buys</span>
-                  <p className="text-[#02c076] font-bold">{token.buys24h || Math.floor(token.volume24h / 800)}</p>
-                </div>
-                <div className="text-center py-1.5 bg-[#0b0e11]">
-                  <span className="text-gray-500">Sells</span>
-                  <p className="text-[#f6465d] font-bold">{token.sells24h || Math.floor(token.volume24h / 1000)}</p>
-                </div>
-                <div className="text-center py-1.5 bg-[#0b0e11]">
-                  <span className="text-gray-500">Net Buy</span>
-                  <p className="text-[#02c076] font-bold">+${formatNumber(token.volume24h * 0.08)}</p>
-                </div>
-                <div className="text-center py-1.5 bg-[#0b0e11]">
-                  <span className="text-gray-500">Bal</span>
-                  <p className="text-white font-bold">{balance.toFixed(3)}</p>
-                  <p className="text-gray-500 text-[8px]">SOL</p>
-                </div>
-                <div className="text-center py-1.5 bg-[#0b0e11]">
-                  <span className="text-gray-500">Bought</span>
-                  <p className="text-white font-bold">${formatNumber(position?.value || 0)}</p>
-                </div>
+            <div className="grid grid-cols-5 gap-px border-b border-[#1e2329] bg-[#1e2329]">
+            {[
+              { label: "1m", change: token.priceChange24h * 0.08 },
+              { label: "5m", change: token.priceChange24h * 0.15 },
+              { label: "1h", change: token.priceChange24h * 0.4 },
+              { label: "24h", change: token.priceChange24h },
+            ].map((item) => (
+              <div key={item.label} className="text-center py-1 sm:py-1.5 bg-[#0b0e11]">
+                <p className="text-[8px] sm:text-[9px] text-gray-500">{item.label}</p>
+                <p className={cn(
+                  "text-[9px] sm:text-[10px] font-bold",
+                  item.change >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
+                )}>{item.change >= 0 ? "+" : ""}{item.change.toFixed(1)}%</p>
               </div>
+            ))}
+            <div className="text-center py-1 sm:py-1.5 bg-[#0b0e11]">
+              <p className="text-[8px] sm:text-[9px] text-gray-500">Vol</p>
+              <p className="text-[9px] sm:text-[10px] text-white font-bold">${formatNumber(token.volume24h)}</p>
+            </div>
+          </div>
 
-            <div className="flex p-1.5 border-b border-[#1e2329]">
+          <div className="flex p-1.5 border-b border-[#1e2329]">
             <button
               onClick={() => setActiveTab("buy")}
               className={cn(
@@ -537,10 +647,51 @@ export default function TradePage() {
             >
               Sell
             </button>
-            <button className="ml-1 px-2 py-2 text-[10px] font-bold bg-[#1e2329] text-gray-400 rounded">
-              Auto
+            <button 
+              onClick={() => setShowSlippageInput(!showSlippageInput)}
+              className={cn(
+                "ml-1 px-2 py-2 text-[10px] font-bold rounded flex items-center gap-1",
+                showSlippageInput ? "bg-[#02c076] text-black" : "bg-[#1e2329] text-gray-400"
+              )}
+              title="Slippage settings"
+            >
+              <Settings className="w-3 h-3" />
+              {slippage}%
             </button>
           </div>
+
+          {showSlippageInput && (
+            <div className="px-2 py-2 border-b border-[#1e2329] bg-[#0d1117]">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-500">Slippage:</span>
+                <div className="flex gap-1 flex-1">
+                  {[0.5, 1, 2, 5].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSlippage(s)}
+                      className={cn(
+                        "flex-1 py-1 text-[10px] font-bold rounded",
+                        slippage === s 
+                          ? "bg-[#02c076] text-black" 
+                          : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                      )}
+                    >
+                      {s}%
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  type="number"
+                  value={slippage}
+                  onChange={(e) => setSlippage(Math.min(50, Math.max(0.1, parseFloat(e.target.value) || 1)))}
+                  className="w-16 h-7 text-[10px] bg-[#1e2329] border-[#2b3139] text-center"
+                  step="0.1"
+                  min="0.1"
+                  max="50"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="p-2 space-y-2 flex-1">
             {!publicKey ? (
@@ -594,25 +745,71 @@ export default function TradePage() {
                   </div>
                 ) : (
                   <div>
-                    <div className="flex gap-1">
-                      {[25, 50, 75, 100].map((pct) => (
-                        <button
-                          key={pct}
-                          onClick={() => setSellPercent(pct)}
-                          className={cn(
-                            "flex-1 py-2 text-[10px] font-bold rounded",
-                            sellPercent === pct 
-                              ? "bg-[#f6465d] text-white" 
-                              : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
-                          )}
-                        >
-                          {pct}%
-                        </button>
-                      ))}
+                    <div className="flex gap-1 mb-1.5">
+                      <button
+                        onClick={() => setSellMode("percent")}
+                        className={cn(
+                          "flex-1 py-1 text-[10px] font-bold rounded",
+                          sellMode === "percent" 
+                            ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" 
+                            : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                        )}
+                      >
+                        %
+                      </button>
+                      <button
+                        onClick={() => setSellMode("custom")}
+                        className={cn(
+                          "flex-1 py-1 text-[10px] font-bold rounded",
+                          sellMode === "custom" 
+                            ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" 
+                            : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                        )}
+                      >
+                        Custom
+                      </button>
                     </div>
+                    
+                    {sellMode === "percent" ? (
+                      <div className="flex gap-1">
+                        {[25, 50, 75, 100].map((pct) => (
+                          <button
+                            key={pct}
+                            onClick={() => setSellPercent(pct)}
+                            className={cn(
+                              "flex-1 py-2 text-[10px] font-bold rounded",
+                              sellPercent === pct 
+                                ? "bg-[#f6465d] text-white" 
+                                : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                            )}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={customSellAmount}
+                          onChange={(e) => setCustomSellAmount(e.target.value)}
+                          placeholder={position ? `Max: ${position.uiBalance.toFixed(4)}` : "0.0"}
+                          className="bg-[#1e2329] border-[#2b3139] h-9 font-mono text-sm pr-16"
+                        />
+                        <button
+                          onClick={() => position && setCustomSellAmount(position.uiBalance.toString())}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#f6465d] font-bold hover:underline"
+                        >
+                          MAX
+                        </button>
+                      </div>
+                    )}
+                    
                     {position && position.uiBalance > 0 && (
                       <p className="text-[10px] text-gray-500 mt-1.5 px-1">
-                        Selling: {((position.uiBalance * sellPercent) / 100).toFixed(4)} {token.symbol}
+                        Selling: {sellMode === "custom" && customSellAmount 
+                          ? Math.min(parseFloat(customSellAmount) || 0, position.uiBalance).toFixed(4) 
+                          : ((position.uiBalance * sellPercent) / 100).toFixed(4)} {token.symbol}
                       </p>
                     )}
                   </div>
@@ -629,87 +826,106 @@ export default function TradePage() {
                   </div>
                 )}
 
-                  <Button
-                    onClick={handleTrade}
-                    disabled={
-                      isTrading || 
-                      isSwapping || 
-                      (activeTab === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0)) ||
-                      (activeTab === "sell" && (!position || position.uiBalance <= 0))
-                    }
-                    className={cn(
-                      "w-full h-10 font-bold text-sm",
-                      activeTab === "buy" 
-                        ? "bg-[#02c076] hover:bg-[#02a566] text-black" 
-                        : "bg-[#f6465d] hover:bg-[#d9304a] text-white"
-                    )}
-                  >
-                    {isTrading || isSwapping ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      `${activeTab === "buy" ? "Buy" : "Sell"} ${activeTab === "buy" ? buyAmount : sellPercent + "%"} (${activeTab === "buy" ? "$" + (parseFloat(buyAmount || "0") * 240).toFixed(2) : "$" + ((position?.value || 0) * sellPercent / 100).toFixed(2)})`
-                    )}
-                  </Button>
+                <Button
+                  onClick={handleTrade}
+                  disabled={
+                    isTrading || 
+                    isSwapping || 
+                    (activeTab === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0)) ||
+                    (activeTab === "sell" && (!position || position.uiBalance <= 0 || (sellMode === "custom" && (!customSellAmount || parseFloat(customSellAmount) <= 0))))
+                  }
+                  className={cn(
+                    "w-full h-10 font-bold text-sm",
+                    activeTab === "buy" 
+                      ? "bg-[#02c076] hover:bg-[#02a566] text-black" 
+                      : "bg-[#f6465d] hover:bg-[#d9304a] text-white"
+                  )}
+                >
+                  {isTrading || isSwapping ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : activeTab === "buy" ? (
+                    `Buy ${buyAmount} SOL`
+                  ) : sellMode === "custom" && customSellAmount ? (
+                    `Sell ${parseFloat(customSellAmount).toFixed(4)} ${token.symbol}`
+                  ) : (
+                    `Sell ${sellPercent}%`
+                  )}
+                </Button>
 
-                  <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
-                    {["Top 10", "DEV", "Holders", "Snipers"].map((label, i) => (
-                      <div key={label} className="text-center">
-                        <p className="text-[9px] text-gray-500">{label}</p>
-                        <p className={cn(
-                          "text-[10px] font-bold",
-                          i === 0 ? "text-[#f6465d]" : i === 1 ? "text-yellow-500" : "text-white"
-                        )}>
-                          {i === 0 ? `${top10Percent.toFixed(1)}%` : i === 1 ? "1.67%" : i === 2 ? holdersCount : "1.67%"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
+                  {["Top 10", "DEV", "Holders", "Snipers"].map((label, i) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] text-gray-500">{label}</p>
+                      <p className={cn(
+                        "text-[10px] font-bold",
+                        i === 0 ? "text-[#f6465d]" : i === 1 ? "text-yellow-500" : "text-white"
+                      )}>
+                        {i === 0 ? `${top10Percent.toFixed(1)}%` : i === 1 ? "1.67%" : i === 2 ? holdersCount : "1.67%"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
-                  <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
-                    {["Insiders", "Phishing", "Bundler", "Dex Paid"].map((label, i) => (
-                      <div key={label} className="text-center">
-                        <p className="text-[9px] text-gray-500">{label}</p>
-                        <p className={cn(
-                          "text-[10px] font-bold",
-                          i === 2 ? "text-[#f6465d]" : "text-[#02c076]"
-                        )}>
-                          {i === 0 ? "0%" : i === 1 ? "0.1%" : i === 2 ? "34.2%" : "Unpaid"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
+                  {["Insiders", "Phishing", "Bundler", "Dex Paid"].map((label, i) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] text-gray-500">{label}</p>
+                      <p className={cn(
+                        "text-[10px] font-bold",
+                        i === 2 ? "text-[#f6465d]" : "text-[#02c076]"
+                      )}>
+                        {i === 0 ? "0%" : i === 1 ? "0.1%" : i === 2 ? "34.2%" : "Unpaid"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
-                  <div className="hidden lg:flex gap-1 pt-1">
-                    <SecurityBadge label="NoMint" safe={!token.security?.isMintable} />
-                    <SecurityBadge label="NoBlacklist" safe={true} />
-                    <SecurityBadge label="Burnt" safe={true} />
-                  </div>
-                </>
-              )}
+                <div className="hidden lg:flex gap-1 pt-1">
+                  <SecurityBadge label="NoMint" safe={!token.security?.isMintable} />
+                  <SecurityBadge label="NoBlacklist" safe={true} />
+                  <SecurityBadge label="Burnt" safe={true} />
+                </div>
+              </>
+            )}
 
-              <div className="hidden lg:grid grid-cols-2 gap-1.5 pt-2">
-              <a
-                href={`https://dexscreener.com/solana/${token.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
-              >
-                <ExternalLink className="w-3 h-3" />
-                DexScreener
-              </a>
-              <a
-                href={`https://solscan.io/token/${token.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
-              >
-                <ExternalLink className="w-3 h-3" />
-                Solscan
-              </a>
-            </div>
+              <div className="grid grid-cols-2 gap-1.5 pt-2">
+                <a
+                  href={`https://dexscreener.com/solana/${token.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
+                >
+                  <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  DexScreener
+                </a>
+                <a
+                  href={`https://solscan.io/token/${token.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
+                >
+                  <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  Solscan
+                </a>
+              </div>
+
+              <div className="hidden sm:block mt-auto pt-2 sm:pt-3 border-t border-[#1e2329]">
+                <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
+                  <span className="text-xs sm:text-sm font-bold text-white">DYOR</span>
+                  {aiLoading && <Loader2 className="w-3 h-3 animate-spin text-[#02c076]" />}
+                </div>
+                {aiAnalysis ? (
+                  <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed line-clamp-3">{aiAnalysis}</p>
+                ) : aiLoading ? (
+                  <p className="text-[10px] sm:text-xs text-gray-500">Analyzing...</p>
+                ) : (
+                  <p className="text-[10px] sm:text-xs text-gray-500">AI analysis loading...</p>
+                )}
+              </div>
           </div>
         </div>
       </div>
@@ -742,9 +958,11 @@ function PositionDisplay({
 }) {
   const [myTrades, setMyTrades] = useState<any[]>([]);
   const [tradesLoading, setTradesLoading] = useState(false);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!publicKey || !token) return;
+    if (!publicKey || !token || fetchedRef.current) return;
+    fetchedRef.current = true;
     
     const fetchMyTrades = async () => {
       setTradesLoading(true);
@@ -761,7 +979,7 @@ function PositionDisplay({
     };
     
     fetchMyTrades();
-  }, [publicKey, token]);
+  }, [publicKey, token?.address]);
 
   if (!publicKey) {
     return <EmptyState message="Connect wallet to see position" />;
@@ -873,25 +1091,32 @@ function TradesTable({ trades, loading }: { trades: any[]; loading: boolean }) {
   }
 
   return (
-    <div className="text-[10px]">
-      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
-        <span>Age</span>
-        <span>Type</span>
-        <span>Price</span>
-        <span>Amount</span>
+    <div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
+        <span>AGE</span>
+        <span>TYPE</span>
+        <span className="hidden sm:block">PRICE</span>
+        <span>AMT</span>
         <span>USD</span>
-        <span>Maker</span>
+        <span className="hidden sm:block">MAKER</span>
       </div>
       {trades.map((trade, i) => (
-        <div key={trade.id || i} className="grid grid-cols-6 gap-2 px-3 py-1.5 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30">
-          <span className="text-gray-400">{trade.age}</span>
-          <span className={trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]"}>
+        <div key={trade.id || i} className="grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
+          <span className="text-gray-400 text-[10px] sm:text-xs">{trade.age}</span>
+          <span className={cn(
+            "font-bold text-[10px] sm:text-sm",
+            trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]"
+          )}>
             {trade.type === "buy" ? "B" : "S"}
           </span>
-          <span className="text-white font-mono">{trade.mcap || "-"}</span>
-          <span className="text-[#02c076]">{formatNumber(trade.amount)}</span>
-          <span className="text-white">${formatNumber(trade.amountUsd || 0)}</span>
-          <span className="text-gray-500 font-mono">{trade.maker}</span>
+          <span className="text-gray-400 font-mono text-[10px] hidden sm:block">
+            {trade.price > 0 ? `$${formatPrice(trade.price)}` : "-"}
+          </span>
+          <span className={cn("font-medium text-[10px] sm:text-xs", trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]")}>
+            {formatNumber(trade.amount)}
+          </span>
+          <span className="text-white font-bold text-[10px] sm:text-sm">${formatNumber(trade.amountUsd || 0)}</span>
+          <span className="text-gray-500 font-mono truncate text-[10px] hidden sm:block">{trade.maker}</span>
         </div>
       ))}
     </div>
@@ -912,26 +1137,26 @@ function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }
   }
 
   return (
-    <div className="text-[10px]">
-      <div className="grid grid-cols-4 gap-2 px-3 py-1.5 text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
+    <div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
         <span>#</span>
         <span>Address</span>
         <span>%</span>
-        <span>Txns</span>
+        <span className="hidden sm:block">Txns</span>
       </div>
       {holders.map((holder) => (
-        <div key={holder.rank} className="grid grid-cols-4 gap-2 px-3 py-1.5 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30">
-          <span className="text-gray-400">{holder.rank}</span>
+        <div key={holder.rank} className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
+          <span className="text-gray-400 text-[10px] sm:text-sm">{holder.rank}</span>
           <a 
             href={`https://solscan.io/account/${holder.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#02c076] font-mono hover:underline"
+            className="text-[#02c076] font-mono hover:underline truncate text-[10px] sm:text-sm"
           >
             {holder.addressShort}
           </a>
-          <span className="text-white">{holder.percentage?.toFixed(2)}%</span>
-          <span className="text-gray-400">{holder.txCount || "-"}</span>
+          <span className="text-white font-bold text-[10px] sm:text-sm">{holder.percentage?.toFixed(1)}%</span>
+          <span className="text-gray-400 text-[10px] hidden sm:block">{holder.txCount || "-"}</span>
         </div>
       ))}
     </div>
@@ -940,7 +1165,7 @@ function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+    <div className="flex items-center justify-center h-full text-gray-500 text-xs sm:text-sm p-4">
       {message}
     </div>
   );

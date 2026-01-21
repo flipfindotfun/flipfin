@@ -182,17 +182,25 @@ async function fetchBirdeyeTrending(): Promise<TokenInfo[]> {
       "https://public-api.birdeye.so/defi/token_trending?sort_by=volume24hUSD&sort_type=desc&offset=0&limit=50",
       {
         headers: {
+          "accept": "application/json",
           "X-API-KEY": BIRDEYE_API_KEY || "",
           "x-chain": "solana",
         },
-        next: { revalidate: 30 },
+        next: { revalidate: 60 },
       }
     );
 
-    if (!res.ok) throw new Error("Birdeye trending API failed");
+    if (!res.ok) {
+      console.error("Birdeye API status:", res.status);
+      return [];
+    }
     
     const data = await res.json();
-    const allTokens = (data.data?.items || []).map((t: any) => enrichToken({
+    if (!data.success || !data.data?.tokens) {
+      return [];
+    }
+    
+    const allTokens = (data.data.tokens || []).map((t: any) => enrichToken({
       address: t.address,
       symbol: t.symbol || "MEME",
       name: t.name || t.symbol || "Unknown",

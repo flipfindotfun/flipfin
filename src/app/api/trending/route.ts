@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
 
-let cachedData: { tokens: any[]; timestamp: number } | null = null;
-const CACHE_DURATION = 30000; // 30 seconds
+let cachedData: { tokens: any[]; timestamp: number; source: string } | null = null;
+const CACHE_DURATION = 60000;
 
 export async function GET() {
   // Return cached data if fresh
@@ -83,7 +83,6 @@ export async function GET() {
     console.error("DexScreener error:", error.message);
   }
 
-  // Fallback to Birdeye
   if (BIRDEYE_API_KEY) {
     try {
       const response = await axios.get(
@@ -96,41 +95,44 @@ export async function GET() {
             limit: 20
           },
           headers: {
+            "accept": "application/json",
             "X-API-KEY": BIRDEYE_API_KEY,
             "x-chain": "solana"
           },
-          timeout: 10000
+          timeout: 15000
         }
       );
 
-      const tokens = response.data?.data?.tokens || [];
-      
-      const mappedTokens = tokens.map((t: any) => ({
-        address: t.address,
-        symbol: t.symbol,
-        name: t.name,
-        decimals: t.decimals || 9,
-        price: t.price || 0,
-        priceChange24h: t.priceChange24h || 0,
-        volume24h: t.volume24hUSD || 0,
-        liquidity: t.liquidity || 0,
-        marketCap: t.mc || t.v24hUSD || 0,
-        logoURI: t.logoURI,
-        rank: t.rank
-      }));
+      if (response.data?.success && response.data?.data?.tokens) {
+        const tokens = response.data.data.tokens;
+        
+        const mappedTokens = tokens.map((t: any) => ({
+          address: t.address,
+          symbol: t.symbol,
+          name: t.name,
+          decimals: t.decimals || 9,
+          price: t.price || 0,
+          priceChange24h: t.priceChange24h || 0,
+          volume24h: t.volume24hUSD || 0,
+          liquidity: t.liquidity || 0,
+          marketCap: t.mc || t.volume24hUSD || 0,
+          logoURI: t.logoURI,
+          rank: t.rank
+        }));
 
-      if (mappedTokens.length > 0) {
-        cachedData = { tokens: mappedTokens, timestamp: Date.now() };
+        if (mappedTokens.length > 0) {
+          cachedData = { tokens: mappedTokens, timestamp: Date.now(), source: "birdeye" };
+        }
+
+        return NextResponse.json({
+          success: true,
+          tokens: mappedTokens,
+          source: "birdeye",
+          timestamp: Date.now(),
+        });
       }
-
-      return NextResponse.json({
-        success: true,
-        tokens: mappedTokens,
-        source: "birdeye",
-        timestamp: Date.now(),
-      });
     } catch (error: any) {
-      console.error("Birdeye error:", error.response?.data || error.message);
+      console.error("Birdeye error:", error.response?.status, error.response?.data || error.message);
     }
   }
 

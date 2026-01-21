@@ -1,40 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { 
-  Connection, 
-  VersionedTransaction, 
-} from "@solana/web3.js";
+import { VersionedTransaction } from "@solana/web3.js";
 import { useWallet } from "@/lib/wallet-context";
 
 const PLATFORM_FEE_BPS = 50;
-
-async function confirmTransactionWithRetry(
-  connection: Connection,
-  signature: string,
-  maxRetries = 30,
-  intervalMs = 2000
-): Promise<boolean> {
-  for (let i = 0; i < maxRetries; i++) {
-    const status = await connection.getSignatureStatus(signature);
-    
-    if (status.value?.confirmationStatus === "confirmed" || 
-        status.value?.confirmationStatus === "finalized") {
-      if (status.value.err) {
-        throw new Error(`Transaction failed: ${JSON.stringify(status.value.err)}`);
-      }
-      return true;
-    }
-    
-    if (status.value?.err) {
-      throw new Error(`Transaction failed: ${JSON.stringify(status.value.err)}`);
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
-  }
-  
-  throw new Error("Transaction confirmation timeout - check your wallet for status");
-}
 
 export function useJupiter() {
   const { wallet, publicKey, refreshBalance } = useWallet();
@@ -43,28 +13,31 @@ export function useJupiter() {
   const getQuote = useCallback(async (
     inputMint: string,
     outputMint: string,
-    amount: number,
-    slippageBps = 2500
+    amount: number
   ) => {
     try {
       if (amount <= 0) {
         return { error: "Amount must be greater than 0" };
       }
 
-      const response = await fetch("/api/jupiter/quote", {
-        method: "POST",
+      const params = new URLSearchParams({
+        inputMint,
+        outputMint,
+        amount: Math.floor(amount).toString(),
+      });
+
+      if (publicKey) {
+        params.append("taker", publicKey);
+      }
+
+      const response = await fetch(`/api/jupiter/quote?${params}`, {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inputMint,
-          outputMint,
-          amount: Math.floor(amount),
-          slippageBps,
-        }),
       });
 
       const data = await response.json();
       
-      console.log("Jupiter quote response:", data);
+      console.log("Jupiter Ultra order response:", data);
 
       if (data.error) {
         return { error: data.error };
@@ -79,54 +52,58 @@ export function useJupiter() {
       console.error("Quote error:", error);
       return { error: error.message || "Failed to get quote" };
     }
-  }, []);
+  }, [publicKey]);
 
-  const swap = useCallback(async (quoteResponse: any) => {
+  const swap = useCallback(async (orderResponse: any) => {
     if (!wallet || !publicKey) {
       throw new Error("Wallet not connected");
     }
 
+    if (!orderResponse.transaction) {
+      throw new Error("No transaction in order response");
+    }
+
+    if (!orderResponse.requestId) {
+      throw new Error("No requestId in order response");
+    }
+
     setLoading(true);
-    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "https://api.mainnet-beta.solana.com";
-    const connection = new Connection(rpcUrl, "confirmed");
 
     try {
+      const txBuf = Buffer.from(orderResponse.transaction, "base64");
+      const transaction = VersionedTransaction.deserialize(txBuf);
+      
+      transaction.sign([wallet]);
+      
+      const signedTx = Buffer.from(transaction.serialize()).toString("base64");
+
       const response = await fetch("/api/jupiter/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quoteResponse,
-          userPublicKey: publicKey,
+          signedTransaction: signedTx,
+          requestId: orderResponse.requestId,
+          walletAddress: publicKey,
+          inputAmount: orderResponse.inAmount,
+          outputAmount: orderResponse.outAmount,
+          inputMint: orderResponse.inputMint,
+          outputMint: orderResponse.outputMint,
         }),
       });
 
-      const swapData = await response.json();
-      console.log("Jupiter swap response:", swapData);
+      const executeData = await response.json();
+      console.log("Jupiter Ultra execute response:", executeData);
       
-      if (swapData.error) {
-        throw new Error(swapData.error);
+      if (executeData.error) {
+        throw new Error(executeData.error);
       }
 
-      if (!swapData.swapTransaction) {
-        throw new Error("No swap transaction returned");
+      if (executeData.status === "Failed") {
+        throw new Error("Swap failed");
       }
-
-      const swapTransactionBuf = Buffer.from(swapData.swapTransaction, "base64");
-      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-      
-      transaction.sign([wallet]);
-
-        const signature = await connection.sendRawTransaction(transaction.serialize(), {
-          skipPreflight: true,
-          maxRetries: 2,
-        });
-
-      console.log("Transaction sent:", signature);
-
-      await confirmTransactionWithRetry(connection, signature);
 
       refreshBalance();
-      return signature;
+      return executeData.signature;
     } catch (error: any) {
       console.error("Swap error:", error);
       throw error;
