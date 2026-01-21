@@ -1,0 +1,68 @@
+.chart-controls-bar {
+  background-color: #0b0e11 !important;
+  border-bottom: 1px solid #1e2329 !important;
+}
+
+.chart-page {
+  background-color: #0b0e11 !important;
+}
+
+.pane-legend {
+  color: #848e9c !important;
+}
+
+.apply-common-tooltip {
+  background-color: #1e2329 !important;
+  border-color: #2b3139 !important;
+  color: #eaecef !important;
+}
+
+.tv-floating-toolbar {
+  background-color: #1e2329 !important;
+  border-color: #2b3139 !important;
+}
+
+.button-2ioYhFEY {
+  color: #848e9c !important;
+}
+
+.button-2ioYhFEY:hover {
+  color: #eaecef !important;
+  background-color: #2b3139 !important;
+}
+
+.isActive-2ioYhFEY {
+  color: #02c076 !important;
+}
+
+.separator-2ioYhFEY {
+  background-color: #2b3139 !important;
+}
+
+.drawing-toolbar {
+  background-color: #0b0e11 !important;
+  border-right: 1px solid #1e2329 !important;
+}
+
+.item-2xPVYue0 {
+  color: #848e9c !important;
+}
+
+.item-2xPVYue0:hover {
+  color: #eaecef !important;
+  background-color: #1e2329 !important;
+}
+
+.isActive-2xPVYue0 {
+  background-color: #1e2329 !important;
+  color: #02c076 !important;
+}
+
+.layout__area--right {
+  background-color: #0b0e11 !important;
+}
+
+.layout__area--bottom {
+  background-color: #0b0e11 !important;
+  border-top: 1px solid #1e2329 !important;
+}

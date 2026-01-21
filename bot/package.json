@@ -1,0 +1,37 @@
+{
+  "name": "solana-sniper-bot",
+  "version": "1.0.0",
+  "description": "Production-ready Solana sniper trading bot with copy trading, security checks, and Jupiter integration",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:devnet": "NETWORK=devnet node src/index.js",
+    "generate-wallet": "node src/utils/generateWallet.js",
+    "test-security": "node src/utils/testSecurity.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "solana",
+    "sniper",
+    "trading",
+    "bot",
+    "jupiter",
+    "pump.fun",
+    "raydium"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@jup-ag/api": "^6.0.48",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.95.8",
+    "axios": "^1.7.9",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.7",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

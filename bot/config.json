@@ -1,0 +1,90 @@
+{
+  "trading": {
+    "buyAmountSOL": 0.1,
+    "maxBuyAmountSOL": 1.0,
+    "slippageBps": 1500,
+    "priorityFeeLamports": 10000000,
+    "maxRetries": 3,
+    "retryDelayMs": 1000,
+    "autoSell": {
+      "enabled": true,
+      "profitTargetMultiplier": 2.0,
+      "secondProfitTargetMultiplier": 5.0,
+      "sellPercentageAtFirstTarget": 50,
+      "trailingStopLossPercent": 20,
+      "timeBasedExitMinutes": 15,
+      "stopLossPercent": 50
+    }
+  },
+
+  "monitoring": {
+    "platforms": ["pumpfun", "raydium", "pumpswap"],
+    "filters": {
+      "minLiquidityUSD": 1000,
+      "maxTokenAgeMinutes": 5,
+      "minHolders": 10,
+      "maxCreatorHoldingPercent": 30
+    },
+    "pingIntervalMs": 30000,
+    "reconnectDelayMs": 5000,
+    "maxReconnectAttempts": 10
+  },
+
+  "security": {
+    "enabled": true,
+    "checks": {
+      "honeypotDetection": true,
+      "liquidityLockCheck": true,
+      "ownershipRenounced": true,
+      "maxBuyTaxPercent": 5,
+      "maxSellTaxPercent": 5,
+      "minLiquidityUSD": 1000,
+      "maxTopHolderPercent": 30,
+      "checkFreezeable": true,
+      "checkMintable": true
+    },
+    "simulateTrades": true,
+    "skipSecurityForWhitelist": true
+  },
+
+  "copyTrading": {
+    "enabled": false,
+    "wallets": [],
+    "copyBuyOnly": true,
+    "maxCopyAmountSOL": 0.5,
+    "copyPercentage": 100,
+    "delayMs": 100,
+    "requireSecurityCheck": true
+  },
+
+  "whitelist": {
+    "tokens": [],
+    "creators": [],
+    "skipSecurityCheck": true
+  },
+
+  "blacklist": {
+    "tokens": [],
+    "creators": []
+  },
+
+  "rateLimit": {
+    "maxRequestsPerMinute": 60,
+    "cooldownMs": 1000
+  },
+
+  "logging": {
+    "level": "info",
+    "toFile": true,
+    "maxFileSizeMB": 10,
+    "maxFiles": 5
+  },
+
+  "advanced": {
+    "useJitoBundles": false,
+    "jitoTipLamports": 10000,
+    "skipPreflight": true,
+    "commitment": "confirmed",
+    "computeUnitLimit": 200000
+  }
+}
