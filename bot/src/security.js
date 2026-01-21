@@ -29,6 +29,7 @@ export class SecurityValidator {
     this.cache = new Map();
     this.cacheExpiry = 60000;
   }
+  
 
   /**
    * Perform all security checks on a token

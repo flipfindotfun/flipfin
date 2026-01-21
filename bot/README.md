@@ -13,6 +13,7 @@ A production-ready Solana sniper trading bot inspired by GMGN.ai. This bot monit
 
 ## ⚠️ Important Warnings
 
+
 1. **NEVER share your private key** with anyone or commit it to version control
 2. **Use a dedicated trading wallet** with limited funds - only trade what you can afford to lose
 3. **Start with devnet** for testing before moving to mainnet

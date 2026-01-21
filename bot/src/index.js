@@ -40,6 +40,7 @@ class SniperBot {
     this.copyTrader = null;
     this.isRunning = false;
   }
+  
 
   /**
    * Initialize all bot components

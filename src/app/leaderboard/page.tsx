@@ -21,6 +21,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     fetchLeaderboard();
   }, [timeframe]);
+  
 
   const fetchLeaderboard = async () => {
     setLoading(true);
