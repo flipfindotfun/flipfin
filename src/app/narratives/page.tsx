@@ -314,11 +314,12 @@ export default function NarrativesPage() {
                 />
               )}
 
-              <TwitterFeed
-                query="crypto narrative alpha solana ethereum -is:retweet lang:en"
-                limit={10}
-                title="Narrative Alpha"
-              />
+                <TwitterFeed
+                  query={selectedNarrative ? `${selectedNarrative.name} crypto solana` : "crypto narrative alpha solana"}
+                  limit={10}
+                  title={selectedNarrative ? `${selectedNarrative.name} Tweets` : "Narrative Alpha"}
+                  key={selectedNarrative?.id || "default"}
+                />
 
               <div className="bg-[#0d1117] border border-[#1e2329] rounded-xl p-4">
                 <h3 className="text-sm font-medium text-white mb-3">Lifecycle Stages</h3>

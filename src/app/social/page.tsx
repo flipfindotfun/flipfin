@@ -354,30 +354,31 @@ export default function SocialProofPage() {
               )}
             </div>
 
-            <div className="lg:w-80 space-y-4">
-              <MarketStatsWidget />
-              
-              {selectedToken && (
-                <AIAnalysisWidget
-                  type="token"
-                  data={{
-                    symbol: selectedToken.symbol,
-                    name: selectedToken.name,
-                    price: 0,
-                    priceChange24h: 0,
-                    volume24h: selectedToken.volume24h,
-                    marketCap: 0,
-                    holders: selectedToken.holders,
-                    topHolderPercent: selectedToken.topHolderPercent,
-                  }}
-                />
-              )}
+              <div className="lg:w-80 space-y-4">
+                <MarketStatsWidget />
+                
+                {selectedToken && (
+                  <AIAnalysisWidget
+                    type="token"
+                    data={{
+                      symbol: selectedToken.symbol,
+                      name: selectedToken.name,
+                      price: 0,
+                      priceChange24h: 0,
+                      volume24h: selectedToken.volume24h,
+                      marketCap: 0,
+                      holders: selectedToken.holders,
+                      topHolderPercent: selectedToken.topHolderPercent,
+                    }}
+                  />
+                )}
 
-              <TwitterFeed
-                query="solana memecoin pump crypto -is:retweet lang:en"
-                limit={8}
-                title="Crypto Twitter"
-              />
+                  <TwitterFeed
+                    query={selectedToken ? `$${selectedToken.symbol} OR ${selectedToken.address.slice(0, 8)}` : "solana memecoin crypto"}
+                    limit={8}
+                    title={selectedToken ? `${selectedToken.symbol} Tweets` : "Crypto Twitter"}
+                    key={selectedToken?.address || "default"}
+                  />
             </div>
           </div>
         </div>

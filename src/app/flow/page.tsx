@@ -233,8 +233,8 @@ export default function FlowPage() {
                           </Link>
                        </div>
                     ) : (
-                      <div className="space-y-4">
-                        <TwitterFeed query="solana alpha lang:en" limit={5} title="Market Pulse" />
+                        <div className="space-y-4">
+                          <TwitterFeed query="solana alpha" limit={5} title="Market Pulse" />
                       </div>
                     )}
                   </div>

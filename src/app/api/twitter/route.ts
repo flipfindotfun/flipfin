@@ -5,7 +5,6 @@ const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 
 const tweetCache = new Map<string, { tweets: any[]; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000;
-tweetCache.clear();
 
 async function fetchRealTweets(query: string, maxResults: number = 10): Promise<any[]> {
   if (!BEARER_TOKEN) {
