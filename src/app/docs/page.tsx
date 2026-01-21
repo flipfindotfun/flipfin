@@ -9,14 +9,23 @@ import {
   Zap, 
   TrendingUp, 
   Gift, 
-  ChevronDown,
+  ChevronRight,
   ExternalLink,
-  FileText,
   Download,
   Mail,
   Copy,
   Check,
-  Coins
+  Coins,
+  Rocket,
+  Sparkles,
+  Terminal,
+  Wallet,
+  BarChart3,
+  Users,
+  ArrowRight,
+  Globe,
+  Lock,
+  Eye
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -33,341 +42,572 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
+function GlowOrb({ className }: { className?: string }) {
+  return (
+    <div className={cn("absolute w-[500px] h-[500px] rounded-full blur-[120px] opacity-20 pointer-events-none", className)} />
+  );
+}
+
 const sections = [
   {
     id: "about",
     title: "About Flip Finance",
+    subtitle: "Next-gen DeFi terminal",
     icon: Zap,
-    content: `Flip Finance (Flip Finance) is a next-generation DeFi trading terminal built on Solana. We provide professional-grade tools for trading meme coins and tokens with maximum speed and efficiency.
-
-**What is Flip Finance?**
-Flip Finance is a decentralized finance (DeFi) platform that combines advanced trading tools with a seamless user experience. Trade directly from your browser without external wallet extensions - just import your private key or generate a new wallet.
-
-**Key Features:**
-- Direct private key wallet management (generate or import)
-- Real-time token tracking with live prices
-- One-click trading through Jupiter aggregator
-- Portfolio analytics with P&L tracking
-- Money flow visualization between tokens
-- Narrative tracker for market trends
-- Social sentiment from X via BullX
-- Wallet tracker and copy trading
-- Points rewards program with referrals
-
-**Why Flip Finance?**
-- True DeFi - your keys, your crypto
-- No browser extension wallets needed
-- Fast execution through Jupiter DEX aggregator
-- Real-time data from DexScreener & Birdeye
-- Clean, professional trading interface
-- Completely free to use
-- Points system for future $FLIP airdrop`
+    gradient: "from-[#02c076] to-emerald-400",
+    content: [
+      {
+        type: "hero",
+        title: "Trade Solana Like a Pro",
+        description: "Flip Finance is a next-generation DeFi trading terminal built for speed, efficiency, and maximum alpha extraction on Solana."
+      },
+      {
+        type: "features",
+        items: [
+          { icon: Terminal, title: "Direct Wallet Access", desc: "No extensions needed - import your key or generate fresh" },
+          { icon: Zap, title: "Lightning Execution", desc: "Jupiter aggregator for best rates & fastest fills" },
+          { icon: BarChart3, title: "Real-time Analytics", desc: "Live prices, P&L tracking, money flow maps" },
+          { icon: Users, title: "Social Alpha", desc: "X sentiment, wallet tracking, copy trading" },
+        ]
+      },
+      {
+        type: "text",
+        content: "Your keys, your crypto. True DeFi means full control - and full responsibility. We never have access to your private keys."
+      }
+    ]
   },
   {
     id: "getting-started",
     title: "Getting Started",
-    icon: BookOpen,
-    content: `**1. Create or Import Wallet**
-Click "New" in the header to generate a fresh Solana wallet, or click the import icon to enter an existing private key (base58 format). Your key is stored locally in your browser - we never have access to it.
-
-**2. Fund Your Wallet**
-Copy your wallet address and send SOL from an exchange or another wallet. You'll need SOL for trading and transaction fees.
-
-**3. Explore Tokens**
-Browse trending tokens on the home page. Use the search bar to find any token by name or paste a contract address (CA) directly.
-
-**4. Trade**
-Click any token to open the trading interface. Select Buy or Sell, enter your amount, and execute trades directly through Jupiter aggregator for best rates.
-
-**5. Track Portfolio**
-View your holdings in the Portfolio (PnL) section. See unrealized gains/losses and export your trade history.
-
-**6. Earn Points**
-Every dollar you trade earns you 1 point. Refer friends to earn bonus points from their trading activity. Points will be used for the $FLIP airdrop.
-
-**7. Backup Your Key**
-Go to /wallet page or click Export Key in the wallet dropdown to backup your private key. Store it securely - if you lose it, your funds are gone forever.`
+    subtitle: "5 minutes to your first trade",
+    icon: Rocket,
+    gradient: "from-blue-500 to-cyan-400",
+    content: [
+      {
+        type: "steps",
+        items: [
+          { step: "01", title: "Create Wallet", desc: "Click 'New' to generate a fresh Solana keypair, or import an existing private key", icon: Wallet },
+          { step: "02", title: "Fund Account", desc: "Copy your address and send SOL from any exchange or wallet", icon: Coins },
+          { step: "03", title: "Find Alpha", desc: "Browse trending tokens, use search, or paste any contract address", icon: Eye },
+          { step: "04", title: "Execute Trade", desc: "One-click buy/sell through Jupiter with customizable slippage", icon: Zap },
+          { step: "05", title: "Track Gains", desc: "Monitor P&L in your portfolio, export trades, share wins", icon: TrendingUp },
+        ]
+      },
+      {
+        type: "warning",
+        content: "Always backup your private key in a secure location. Lost keys = lost funds. This is irreversible."
+      }
+    ]
   },
   {
     id: "features",
-    title: "Features Guide",
-    icon: TrendingUp,
-    content: `**Token Explorer (Home)**
-Discover trending tokens with real-time prices, 24h volume, market cap, and price changes. Tokens are sorted by volume and activity.
-
-**Trading Interface**
-- Buy/Sell tabs with quick amount presets
-- Jupiter DEX aggregator for best rates
-- Adjustable slippage (default 1%)
-- Real-time quote before execution
-- Security indicators (mint authority, freeze, burn status)
-- Top holders analysis
-
-**Money Flow Map**
-- Visualize capital flows between tokens
-- Drag tokens to rearrange the layout
-- Color-coded by price performance (green = gains, red = losses)
-- Click any token to trade instantly
-
-**Narrative Tracker**
-- Track market narratives (AI Agents, Animal Memes, Political, Viral)
-- Momentum scores and lifecycle stages
-- Capital inflow tracking per narrative
-- Smart wallet exposure metrics
-
-**Hype Feed**
-- Real-time crypto posts from X via BullX API
-- Sentiment analysis (bullish/bearish/neutral)
-- Filter by trending topics
-
-**Wallet Tracker**
-- Monitor any Solana wallet address
-- Track whale movements in real-time
-- Copy trades from successful traders
-
-**Portfolio (PnL)**
-- View all your token holdings
-- Unrealized P&L calculations
-- Trade history with CSV export
-- Shareable P&L cards`
+    title: "Features",
+    subtitle: "Your trading arsenal",
+    icon: Sparkles,
+    gradient: "from-purple-500 to-pink-400",
+    content: [
+      {
+        type: "grid",
+        items: [
+          { title: "Token Explorer", desc: "Real-time trending tokens with volume, MC, and price changes", tag: "HOME" },
+          { title: "Trading Terminal", desc: "Professional interface with security checks & holder analysis", tag: "TRADE" },
+          { title: "Money Flow", desc: "Visualize capital movement between tokens in real-time", tag: "FLOW" },
+          { title: "Narrative Tracker", desc: "Track market narratives, momentum, and smart money moves", tag: "ALPHA" },
+          { title: "Hype Feed", desc: "Live X sentiment analysis from BullX - catch the wave early", tag: "SOCIAL" },
+          { title: "Wallet Tracker", desc: "Monitor whales, copy successful traders, get alerts", tag: "COPY" },
+          { title: "Portfolio PnL", desc: "Full holdings view with unrealized gains and CSV export", tag: "TRACK" },
+          { title: "Points System", desc: "Earn rewards for trading volume and referrals", tag: "EARN" },
+        ]
+      }
+    ]
   },
   {
     id: "wallet",
-    title: "Wallet Management",
+    title: "Wallet Security",
+    subtitle: "Your keys, your crypto",
     icon: Shield,
-    content: `**Private Key Wallet System**
-Flip Finance uses a direct private key system - no browser extensions or external wallet apps required. Your private key is stored locally in your browser's localStorage. We never have access to your keys.
-
-**Generate New Wallet**
-Click the "New" button in the header to create a fresh Solana keypair. A new address and private key will be generated instantly.
-
-**Import Existing Wallet**
-Click the import icon and paste your existing private key (base58 format). This lets you use any existing Solana wallet.
-
-**Export Private Key**
-Click your wallet address > "Export Key" to copy your private key. You can also view it on the /wallet page.
-
-**Security Best Practices:**
-- Always backup your private key in a secure location
-- Never share your private key with anyone
-- Consider using a dedicated trading wallet with limited funds
-- Clearing browser data will remove your wallet - backup first!
-
-**Important Warning:**
-Your private key = your funds. If you lose it or share it, your funds are gone forever. We cannot recover lost keys. This is true DeFi - you have full control and full responsibility.`
+    gradient: "from-amber-500 to-orange-400",
+    content: [
+      {
+        type: "security",
+        items: [
+          { icon: Lock, title: "Local Storage Only", desc: "Your private key never leaves your browser. We can't access it." },
+          { icon: Eye, title: "No Tracking", desc: "We don't collect personal data, IPs, or identification info." },
+          { icon: Shield, title: "Direct Transactions", desc: "Sign transactions locally - nothing goes through our servers." },
+        ]
+      },
+      {
+        type: "checklist",
+        title: "Security Best Practices",
+        items: [
+          "Backup your private key in multiple secure locations",
+          "Never share your key with anyone - we will never ask for it",
+          "Use a dedicated trading wallet with limited funds",
+          "Clearing browser data removes your wallet - backup first"
+        ]
+      },
+      {
+        type: "danger",
+        content: "Your private key = your funds. If you lose it or share it, your funds are gone forever. We cannot help recover lost keys."
+      }
+    ]
   },
   {
     id: "token",
     title: "$FLIP Token",
+    subtitle: "Coming to PumpFun",
     icon: Coins,
-    content: `**Coming Soon on PumpFun**
-The $FLIP token - the native token of Flip Finance - will be launching on PumpFun. Follow ${DEV_TWITTER} on X for launch announcements.
-
-**Tokenomics:**
-- Total Supply: 1,000,000,000 (1B) $FLIP
-- Dev Allocation: 10%
-- Public Sale: 90%
-- Liquidity: 100% Burned (locked forever)
-
-**Fair Launch**
-- No presale or private sale
-- No VC allocation
-- 100% of liquidity burned at launch
-- Fully transparent distribution
-
-**Utility:**
-- Governance voting on Flip Finance features
-- Fee discounts on the platform
-- Access to premium trading features
-- Staking rewards (future roadmap)
-- Revenue sharing (future roadmap)
-
-**How to Get $FLIP:**
-1. Follow ${DEV_TWITTER} on X for launch announcement
-2. Buy on PumpFun when it launches
-3. Trade on Raydium/Jupiter after bonding curve completes
-
-**Airdrop:**
-Flip Finance points will be converted to $FLIP airdrop allocations. The more you trade and refer, the larger your airdrop.`
+    gradient: "from-[#02c076] to-emerald-300",
+    content: [
+      {
+        type: "tokenomics",
+        items: [
+          { label: "Total Supply", value: "1B", sub: "$FLIP" },
+          { label: "Dev Allocation", value: "10%", sub: "Transparent" },
+          { label: "Public Sale", value: "90%", sub: "Fair Launch" },
+          { label: "Liquidity", value: "100%", sub: "Burned Forever" },
+        ]
+      },
+      {
+        type: "utility",
+        items: [
+          "Governance voting on platform features",
+          "Fee discounts on trades",
+          "Access to premium features",
+          "Future staking rewards",
+          "Revenue sharing (roadmap)"
+        ]
+      },
+      {
+        type: "cta",
+        title: "Get $FLIP",
+        description: "Follow for launch announcements",
+        link: `https://x.com/${DEV_TWITTER.replace('@', '')}`,
+        button: "Follow on X"
+      }
+    ]
   },
   {
     id: "rewards",
-    title: "Rewards Program",
+    title: "Rewards",
+    subtitle: "Trade more, earn more",
     icon: Gift,
-    content: `**How Points Work**
-- Earn 1 point for every $1 in trading volume
-- Points accumulate automatically with each trade
-- No minimum trading amount required
-- Points are tied to your wallet address
-
-**Referral Rewards**
-- Get a unique referral link in the Rewards section
-- Earn 20% of points from direct referrals (Level 1)
-- Earn 5% of points from indirect referrals (Level 2)
-- Unlimited referral earnings potential
-
-**Leaderboard**
-- Compete with other traders globally
-- Weekly and all-time rankings
-- Top traders featured on the platform
-
-**$FLIP Airdrop**
-Flip Finance points will be converted to $FLIP token allocations when the token launches. The more points you accumulate, the larger your airdrop allocation will be.
-
-*Note: Point values and reward structures may change before the airdrop. Keep trading and referring to maximize your allocation.*`
+    gradient: "from-rose-500 to-red-400",
+    content: [
+      {
+        type: "rewards",
+        items: [
+          { value: "1 PT", label: "per $1 traded", desc: "Points accumulate automatically" },
+          { value: "20%", label: "Level 1 referral", desc: "From direct referrals" },
+          { value: "5%", label: "Level 2 referral", desc: "From indirect referrals" },
+        ]
+      },
+      {
+        type: "text",
+        content: "Points convert to $FLIP airdrop allocations at token launch. The more you trade and refer, the larger your allocation."
+      },
+      {
+        type: "note",
+        content: "Point values and reward structures may change before the airdrop."
+      }
+    ]
   },
   {
     id: "terms",
     title: "Terms of Service",
+    subtitle: "Updated January 2026",
     icon: Scale,
-    content: `**Last Updated: January 2026**
-
-By accessing and using Flip Finance ("the Platform"), you agree to be bound by these Terms of Service.
-
-**1. Acceptance of Terms**
-By using Flip Finance, you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree, do not use the Platform.
-
-**2. Eligibility**
-You must be at least 18 years old and legally permitted to use cryptocurrency and DeFi services in your jurisdiction. You are solely responsible for compliance with applicable laws.
-
-**3. Nature of Service**
-Flip Finance is a decentralized trading interface that provides tools for interacting with the Solana blockchain. We do NOT:
-- Hold or custody your funds (your keys, your crypto)
-- Execute trades on your behalf
-- Provide financial, investment, or legal advice
-- Guarantee any returns or profits
-
-**4. Private Key Responsibility**
-You are solely responsible for securing your private key. Keys are stored locally in your browser - we cannot recover them if lost. This is the nature of true DeFi.
-
-**5. No Financial Advice**
-Nothing on Flip Finance constitutes financial advice. All content is for informational purposes only. Always do your own research (DYOR).
-
-**6. Limitation of Liability**
-Flip Finance shall not be liable for any losses arising from your use of the Platform, trading decisions, smart contract failures, or third-party service outages.
-
-**7. Modifications**
-We reserve the right to modify these Terms at any time. Continued use constitutes acceptance of new Terms.`
+    gradient: "from-slate-500 to-gray-400",
+    content: [
+      {
+        type: "legal",
+        sections: [
+          { title: "Acceptance", content: "By using Flip Finance, you agree to these Terms. If you disagree, don't use the platform." },
+          { title: "Eligibility", content: "You must be 18+ and legally permitted to use crypto/DeFi services in your jurisdiction." },
+          { title: "Nature of Service", content: "We provide a trading interface. We don't custody funds, execute trades on your behalf, or provide financial advice." },
+          { title: "Your Responsibility", content: "You're responsible for your private key security and all trading decisions." },
+          { title: "Limitation of Liability", content: "We're not liable for losses from trading, smart contract failures, or third-party outages." },
+        ]
+      }
+    ]
   },
   {
     id: "privacy",
-    title: "Privacy Policy",
-    icon: Shield,
-    content: `**Last Updated: January 2026**
-
-**Information We Collect**
-- Wallet addresses (public blockchain data)
-- Trading activity (public blockchain data)
-- Referral relationships (for points calculation)
-
-**What We Don't Collect**
-- Personal identification information
-- IP addresses (not stored)
-- Email addresses (unless voluntarily provided)
-
-**Private Keys**
-Your private key is stored ONLY in your browser's localStorage. We never have access to it. It never leaves your device. This is the foundation of DeFi.
-
-**How We Use Data**
-- To display your portfolio and holdings
-- To calculate points and referral bonuses
-- To show trading history
-- To improve platform functionality
-
-**Third-Party Services**
-Flip Finance integrates with:
-- Jupiter (DEX aggregation and trade execution)
-- Birdeye & DexScreener (price and market data)
-- BullX (X/Twitter feed data)
-- Helius (Solana RPC provider)
-- GeckoTerminal (market data)
-
-These services have their own privacy policies.
-
-**Contact**
-For privacy inquiries: ${DEV_EMAIL}`
+    title: "Privacy",
+    subtitle: "What we collect (almost nothing)",
+    icon: Eye,
+    gradient: "from-indigo-500 to-violet-400",
+    content: [
+      {
+        type: "privacy",
+        collected: [
+          "Wallet addresses (public blockchain data)",
+          "Trading activity (public blockchain data)",
+          "Referral relationships (for points)"
+        ],
+        notCollected: [
+          "Personal identification info",
+          "IP addresses",
+          "Email (unless you provide it)",
+          "Private keys (never)"
+        ]
+      },
+      {
+        type: "text",
+        content: "Your private key is stored ONLY in your browser's localStorage. It never leaves your device. This is the foundation of true DeFi."
+      }
+    ]
   },
   {
     id: "disclaimer",
     title: "Risk Disclaimer",
+    subtitle: "Read this carefully",
     icon: AlertTriangle,
-    content: `**HIGH RISK WARNING**
-
-Cryptocurrency trading, especially meme coins and new tokens, involves substantial risk of loss. You can lose your entire investment. Only trade with funds you can afford to lose completely.
-
-**DeFi & Meme Coin Risks:**
-- Token prices can go to zero instantly
-- Rug pulls and scam tokens are extremely common
-- Smart contracts may contain bugs or exploits
-- Liquidity can be removed without warning
-- Pump and dump schemes are frequent
-- Most new tokens fail
-
-**DYOR - Do Your Own Research**
-Flip Finance provides data and tools, but YOU are responsible for:
-- Verifying token contracts on-chain
-- Checking team legitimacy and history
-- Understanding tokenomics and supply
-- Evaluating liquidity depth and rug risk
-- Checking for honeypot contracts
-- Assessing holder distribution
-
-**Private Key Risks:**
-- Lost keys = lost funds (unrecoverable by anyone)
-- Shared keys = stolen funds
-- Clearing browser data removes your wallet
-- Always backup before any browser changes
-
-**No Guarantees**
-- Past performance does not equal future results
-- We make no profit guarantees whatsoever
-- Trading bots and whales may front-run you
-- Slippage can result in worse execution prices
-
-**Not Financial Advice**
-Nothing on Flip Finance is financial advice. We are not registered financial advisors. All trading decisions are yours alone.
-
-**Only Trade What You Can Afford to Lose**
-Treat this as high-risk speculation.`
+    gradient: "from-red-500 to-rose-400",
+    content: [
+      {
+        type: "danger",
+        content: "Cryptocurrency trading involves substantial risk. You can lose your entire investment. Only trade what you can afford to lose completely."
+      },
+      {
+        type: "risks",
+        items: [
+          "Token prices can go to zero instantly",
+          "Rug pulls and scams are extremely common",
+          "Smart contracts may have exploits",
+          "Liquidity can vanish without warning",
+          "Most new tokens fail"
+        ]
+      },
+      {
+        type: "text",
+        content: "DYOR - Do Your Own Research. Verify contracts, check teams, understand tokenomics. Nothing on Flip Finance is financial advice."
+      }
+    ]
   },
   {
     id: "contact",
-    title: "Contact Us",
+    title: "Contact",
+    subtitle: "Get in touch",
     icon: Mail,
-    content: `**Get in Touch**
-
-We're here to help! Reach out through any of the following channels:
-
-**Developer**
-- Email: ${DEV_EMAIL}
-- X: ${DEV_TWITTER}
-
-**Support**
-For technical issues, bug reports, or feature requests, contact us via email or X DM.
-
-**Community**
-Follow us on X for updates, announcements, $FLIP token launch info, and alpha.
-
-**Business Inquiries**
-For partnerships, integrations, or business-related matters, email us at ${DEV_EMAIL}.
-
-**Response Time**
-We typically respond within 24-48 hours. For urgent issues, X DM is fastest.
-
-**Report a Bug**
-Found a bug? DM us on X with:
-1. What you were trying to do
-2. What happened instead
-3. Your browser and device
-4. Screenshots if possible`
+    gradient: "from-cyan-500 to-blue-400",
+    content: [
+      {
+        type: "contact",
+        email: DEV_EMAIL,
+        twitter: DEV_TWITTER
+      }
+    ]
   },
 ];
 
+function ContentRenderer({ content, sectionId }: { content: any[]; sectionId: string }) {
+  return (
+    <div className="space-y-8">
+      {content.map((block, idx) => {
+        switch (block.type) {
+          case "hero":
+            return (
+              <div key={idx} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-8">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#02c076]/10 rounded-full blur-[100px]" />
+                <h3 className="text-3xl font-black text-white mb-3 relative">{block.title}</h3>
+                <p className="text-gray-400 text-lg leading-relaxed max-w-2xl relative">{block.description}</p>
+              </div>
+            );
+
+          case "features":
+            return (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="group relative overflow-hidden rounded-xl bg-[#1e2329]/50 border border-[#2b3139] p-5 hover:border-[#02c076]/50 transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#02c076]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative flex items-start gap-4">
+                      <div className="p-2.5 rounded-xl bg-[#02c076]/10 text-[#02c076]">
+                        <item.icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white mb-1">{item.title}</h4>
+                        <p className="text-sm text-gray-500">{item.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "steps":
+            return (
+              <div key={idx} className="space-y-4">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="group flex items-start gap-4 p-4 rounded-xl bg-[#1e2329]/30 border border-[#2b3139]/50 hover:border-[#02c076]/30 transition-colors">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[#02c076] to-emerald-400 flex items-center justify-center">
+                      <span className="text-sm font-black text-black">{item.step}</span>
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <h4 className="font-bold text-white mb-1 flex items-center gap-2">
+                        {item.title}
+                        <item.icon className="w-4 h-4 text-gray-500" />
+                      </h4>
+                      <p className="text-sm text-gray-500">{item.desc}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-[#02c076] transition-colors mt-3" />
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "grid":
+            return (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="group relative p-4 rounded-xl bg-[#1e2329]/30 border border-[#2b3139]/50 hover:bg-[#1e2329]/60 transition-all">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-bold text-white">{item.title}</h4>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#02c076]/10 text-[#02c076]">{item.tag}</span>
+                    </div>
+                    <p className="text-sm text-gray-500">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "security":
+            return (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="text-center p-6 rounded-2xl bg-gradient-to-b from-[#1e2329] to-[#0b0e11] border border-[#2b3139]">
+                    <div className="inline-flex p-3 rounded-xl bg-[#02c076]/10 mb-4">
+                      <item.icon className="w-6 h-6 text-[#02c076]" />
+                    </div>
+                    <h4 className="font-bold text-white mb-2">{item.title}</h4>
+                    <p className="text-sm text-gray-500">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "checklist":
+            return (
+              <div key={idx} className="rounded-xl bg-[#1e2329]/50 border border-[#2b3139] p-5">
+                <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#02c076]" />
+                  {block.title}
+                </h4>
+                <div className="space-y-3">
+                  {block.items.map((item: string, i: number) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-[#02c076]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-[#02c076]" />
+                      </div>
+                      <span className="text-sm text-gray-400">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "tokenomics":
+            return (
+              <div key={idx} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-5 text-center">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#02c076]/5 to-transparent" />
+                    <p className="text-3xl font-black text-white relative">{item.value}</p>
+                    <p className="text-xs text-gray-500 mt-1 relative">{item.label}</p>
+                    <p className="text-[10px] text-[#02c076] font-medium mt-1 relative">{item.sub}</p>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "utility":
+            return (
+              <div key={idx} className="rounded-xl bg-[#1e2329]/30 border border-[#2b3139]/50 p-5">
+                <h4 className="font-bold text-white mb-4">Token Utility</h4>
+                <div className="flex flex-wrap gap-2">
+                  {block.items.map((item: string, i: number) => (
+                    <span key={i} className="px-3 py-1.5 rounded-full bg-[#02c076]/10 text-[#02c076] text-xs font-medium">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "cta":
+            return (
+              <div key={idx} className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#02c076] to-emerald-400 p-6">
+                <div className="absolute inset-0 bg-[url('/static/noise.png')] opacity-10" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xl font-black text-black">{block.title}</h4>
+                    <p className="text-black/70 text-sm">{block.description}</p>
+                  </div>
+                  <a
+                    href={block.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-black text-white font-bold rounded-xl hover:bg-black/80 transition-colors"
+                  >
+                    <XIcon className="w-4 h-4" />
+                    {block.button}
+                  </a>
+                </div>
+              </div>
+            );
+
+          case "rewards":
+            return (
+              <div key={idx} className="grid grid-cols-3 gap-4">
+                {block.items.map((item: any, i: number) => (
+                  <div key={i} className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-5 text-center">
+                    <p className="text-3xl font-black text-[#02c076]">{item.value}</p>
+                    <p className="text-sm font-medium text-white mt-1">{item.label}</p>
+                    <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "legal":
+            return (
+              <div key={idx} className="space-y-4">
+                {block.sections.map((section: any, i: number) => (
+                  <div key={i} className="p-4 rounded-xl bg-[#1e2329]/30 border border-[#2b3139]/50">
+                    <h4 className="font-bold text-white mb-2 text-sm">{i + 1}. {section.title}</h4>
+                    <p className="text-sm text-gray-500">{section.content}</p>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "privacy":
+            return (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl bg-[#1e2329]/30 border border-[#2b3139]/50 p-5">
+                  <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-gray-500" />
+                    What we see
+                  </h4>
+                  <div className="space-y-2">
+                    {block.collected.map((item: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-[#02c076]/5 border border-[#02c076]/20 p-5">
+                  <h4 className="font-bold text-[#02c076] mb-3 flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Never collected
+                  </h4>
+                  <div className="space-y-2">
+                    {block.notCollected.map((item: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
+                        <Check className="w-3.5 h-3.5 text-[#02c076]" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+
+          case "risks":
+            return (
+              <div key={idx} className="rounded-xl bg-[#f6465d]/5 border border-[#f6465d]/20 p-5">
+                <h4 className="font-bold text-[#f6465d] mb-4">Key Risks</h4>
+                <div className="space-y-2">
+                  {block.items.map((item: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-gray-400">
+                      <AlertTriangle className="w-4 h-4 text-[#f6465d] flex-shrink-0 mt-0.5" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "contact":
+            return (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a
+                  href={`mailto:${block.email}`}
+                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-[#02c076]/50 transition-all"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#02c076]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="inline-flex p-3 rounded-xl bg-[#02c076]/10 mb-4">
+                      <Mail className="w-6 h-6 text-[#02c076]" />
+                    </div>
+                    <h4 className="font-bold text-white mb-1">Email</h4>
+                    <p className="text-sm text-gray-500">{block.email}</p>
+                  </div>
+                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-[#02c076] group-hover:translate-x-1 transition-all" />
+                </a>
+                <a
+                  href={`https://x.com/${block.twitter.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-white/30 transition-all"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="inline-flex p-3 rounded-xl bg-white/10 mb-4">
+                      <XIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-white mb-1">X / Twitter</h4>
+                    <p className="text-sm text-gray-500">{block.twitter}</p>
+                  </div>
+                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </a>
+              </div>
+            );
+
+          case "text":
+            return (
+              <p key={idx} className="text-gray-400 leading-relaxed">{block.content}</p>
+            );
+
+          case "warning":
+            return (
+              <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-200">{block.content}</p>
+              </div>
+            );
+
+          case "danger":
+            return (
+              <div key={idx} className="relative overflow-hidden rounded-xl bg-[#f6465d]/10 border border-[#f6465d]/30 p-5">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#f6465d]/20 rounded-full blur-[60px]" />
+                <div className="relative flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-[#f6465d] flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#f6465d]/90 font-medium">{block.content}</p>
+                </div>
+              </div>
+            );
+
+          case "note":
+            return (
+              <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-[#1e2329]/50 border-l-2 border-[#02c076]">
+                <p className="text-sm text-gray-500 italic">{block.content}</p>
+              </div>
+            );
+
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+}
+
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("about");
-  const [expandedMobile, setExpandedMobile] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const currentSection = sections.find(s => s.id === activeSection);
 
@@ -409,44 +649,33 @@ export default function DocsPage() {
       doc.setFontSize(16);
       doc.setTextColor(255, 255, 255);
       doc.text(section.title, margin, y);
-      y += 8;
+      y += 6;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(section.subtitle, margin, y);
+      y += 10;
 
       doc.setFontSize(10);
       doc.setTextColor(180, 180, 180);
       
-      const cleanContent = section.content
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/\n\n/g, '\n');
-      
-      const lines = doc.splitTextToSize(cleanContent, maxWidth);
-      
-      for (const line of lines) {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
+      for (const block of section.content) {
+        if (block.type === "text" || block.type === "warning" || block.type === "danger" || block.type === "note") {
+          const lines = doc.splitTextToSize(block.content, maxWidth);
+          for (const line of lines) {
+            if (y > 280) {
+              doc.addPage();
+              y = 20;
+            }
+            doc.text(line, margin, y);
+            y += 5;
+          }
+          y += 3;
         }
-        doc.text(line, margin, y);
-        y += 5;
       }
       
       y += 10;
     }
-
-    doc.addPage();
-    y = 20;
-    doc.setFontSize(14);
-    doc.setTextColor(2, 192, 118);
-    doc.text("Contact Information", margin, y);
-    y += 10;
-    
-    doc.setFontSize(10);
-    doc.setTextColor(180, 180, 180);
-    doc.text(`Email: ${DEV_EMAIL}`, margin, y);
-    y += 6;
-    doc.text(`X: ${DEV_TWITTER}`, margin, y);
-    y += 6;
-    doc.text("Website: https://flipfin.fun", margin, y);
 
     doc.save("Flip-Finance-Documentation.pdf");
   };
@@ -455,209 +684,95 @@ export default function DocsPage() {
     <div className="flex flex-col h-full bg-[#0b0e11] overflow-hidden">
       <Header />
       
-      <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <div className="lg:hidden border-b border-[#1e2329] bg-[#0d1117] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#02c076]" />
-                Documentation
-              </h1>
-              <button
-                onClick={downloadPDF}
-                className="p-2 bg-[#1e2329] rounded-lg"
-              >
-                <Download className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-            <div className="space-y-1">
-              {sections.map((section) => (
-                <div key={section.id}>
+      <div className="flex-1 flex overflow-hidden relative">
+        <GlowOrb className="bg-[#02c076] -left-64 top-0" />
+        <GlowOrb className="bg-purple-500 right-0 bottom-0" />
+        
+        <main className="flex-1 overflow-y-auto relative">
+          <div className="lg:hidden sticky top-0 z-20 border-b border-[#1e2329] bg-[#0b0e11]/95 backdrop-blur-xl">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-[#02c076] to-emerald-400">
+                    <BookOpen className="w-5 h-5 text-black" />
+                  </div>
+                  <div>
+                    <h1 className="font-bold text-white">Docs</h1>
+                    <p className="text-xs text-gray-500">Flip Finance</p>
+                  </div>
+                </div>
+                <button
+                  onClick={downloadPDF}
+                  className="p-2.5 bg-[#1e2329] rounded-xl hover:bg-[#2b3139] transition-colors"
+                >
+                  <Download className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {sections.map((section) => (
                   <button
-                    onClick={() => {
-                      setActiveSection(section.id);
-                      setExpandedMobile(expandedMobile === section.id ? null : section.id);
-                    }}
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-sm transition-colors",
+                      "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all",
                       activeSection === section.id
-                        ? "bg-[#02c076]/10 text-[#02c076]"
-                        : "text-gray-400 hover:text-white hover:bg-[#1e2329]"
+                        ? "bg-[#02c076] text-black"
+                        : "bg-[#1e2329] text-gray-400 hover:text-white"
                     )}
                   >
-                    <span className="flex items-center gap-2">
-                      <section.icon className="w-4 h-4" />
-                      {section.title}
-                    </span>
-                    <ChevronDown className={cn(
-                      "w-4 h-4 transition-transform",
-                      expandedMobile === section.id && "rotate-180"
-                    )} />
+                    <section.icon className="w-3.5 h-3.5" />
+                    {section.title}
                   </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
-          <div ref={contentRef} className="p-6 lg:p-10 lg:pr-80 max-w-4xl">
+          <div className="p-6 lg:p-10 lg:pr-80 max-w-4xl mx-auto">
             {currentSection && (
-              <>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 rounded-xl bg-[#02c076]/10">
-                    <currentSection.icon className="w-6 h-6 text-[#02c076]" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">{currentSection.title}</h2>
-                    <p className="text-xs text-gray-500 mt-1">Last updated: January 2026</p>
+              <div className="space-y-8">
+                <div className="relative">
+                  <div className={cn(
+                    "absolute -left-4 top-0 bottom-0 w-1 rounded-full bg-gradient-to-b",
+                    currentSection.gradient
+                  )} />
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "p-3 rounded-2xl bg-gradient-to-br",
+                      currentSection.gradient
+                    )}>
+                      <currentSection.icon className="w-6 h-6 text-black" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-white">{currentSection.title}</h2>
+                      <p className="text-sm text-gray-500 mt-1">{currentSection.subtitle}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="prose prose-invert max-w-none">
-                  {currentSection.content.split('\n\n').map((paragraph, idx) => {
-                    if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                      return (
-                        <h3 key={idx} className="text-lg font-bold text-white mt-8 mb-3 flex items-center gap-2">
-                          <div className="w-1 h-5 bg-[#02c076] rounded-full" />
-                          {paragraph.replace(/\*\*/g, '')}
-                        </h3>
-                      );
-                    }
-                    
-                    if (paragraph.includes('**')) {
-                      const parts = paragraph.split(/(\*\*[^*]+\*\*)/);
-                      return (
-                        <p key={idx} className="text-gray-400 leading-relaxed mb-4">
-                          {parts.map((part, i) => {
-                            if (part.startsWith('**') && part.endsWith('**')) {
-                              return <strong key={i} className="text-white font-medium">{part.replace(/\*\*/g, '')}</strong>;
-                            }
-                            return <span key={i}>{part}</span>;
-                          })}
-                        </p>
-                      );
-                    }
-                    
-                    if (paragraph.startsWith('- ')) {
-                      const items = paragraph.split('\n').filter(l => l.startsWith('- '));
-                      return (
-                        <ul key={idx} className="space-y-2 text-gray-400 mb-4">
-                          {items.map((item, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#02c076] mt-2 flex-shrink-0" />
-                              <span>{item.replace('- ', '')}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    }
-                    
-                    if (paragraph.startsWith('*') && paragraph.endsWith('*')) {
-                      return (
-                        <p key={idx} className="text-gray-500 italic text-sm mb-4 bg-[#1e2329] rounded-lg p-3 border-l-2 border-[#02c076]">
-                          {paragraph.replace(/^\*|\*$/g, '')}
-                        </p>
-                      );
-                    }
-                    
-                    return (
-                      <p key={idx} className="text-gray-400 leading-relaxed mb-4">
-                        {paragraph}
-                      </p>
-                    );
-                  })}
-                </div>
-
-                {currentSection.id === "contact" && (
-                  <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <a
-                      href={`mailto:${DEV_EMAIL}`}
-                      className="flex items-center gap-4 p-4 bg-[#1e2329] rounded-xl hover:bg-[#2b3139] transition-colors group"
-                    >
-                      <div className="p-3 rounded-xl bg-[#02c076]/10 group-hover:bg-[#02c076]/20 transition-colors">
-                        <Mail className="w-6 h-6 text-[#02c076]" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">Email Us</p>
-                        <p className="text-xs text-gray-500">{DEV_EMAIL}</p>
-                      </div>
-                    </a>
-                    <a
-                      href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-4 p-4 bg-[#1e2329] rounded-xl hover:bg-[#2b3139] transition-colors group"
-                    >
-                      <div className="p-3 rounded-xl bg-white/10 group-hover:bg-white/20 transition-colors">
-                        <XIcon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">Follow on X</p>
-                        <p className="text-xs text-gray-500">{DEV_TWITTER}</p>
-                      </div>
-                    </a>
-                  </div>
-                )}
-
-                {currentSection.id === "token" && (
-                  <div className="mt-8 p-6 bg-gradient-to-br from-[#02c076]/20 to-[#02c076]/5 border border-[#02c076]/30 rounded-xl">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Coins className="w-8 h-8 text-[#02c076]" />
-                      <div>
-                        <h4 className="text-lg font-bold text-white">$FLIP Token Launch</h4>
-                        <p className="text-xs text-gray-400">Coming soon on PumpFun</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                      <div className="bg-[#0b0e11]/50 rounded-lg p-3">
-                        <p className="text-2xl font-bold text-white">10%</p>
-                        <p className="text-xs text-gray-500">Dev</p>
-                      </div>
-                      <div className="bg-[#0b0e11]/50 rounded-lg p-3">
-                        <p className="text-2xl font-bold text-white">90%</p>
-                        <p className="text-xs text-gray-500">Public</p>
-                      </div>
-                      <div className="bg-[#0b0e11]/50 rounded-lg p-3">
-                        <p className="text-2xl font-bold text-[#02c076]">100%</p>
-                        <p className="text-xs text-gray-500">Liq Burned</p>
-                      </div>
-                      <div className="bg-[#0b0e11]/50 rounded-lg p-3">
-                        <p className="text-2xl font-bold text-white">1B</p>
-                        <p className="text-xs text-gray-500">Supply</p>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-[#02c076] text-black font-bold rounded-lg hover:bg-[#02a566] transition-colors"
-                    >
-                      <XIcon className="w-4 h-4" />
-                      Follow for Launch Updates
-                    </a>
-                  </div>
-                )}
-              </>
+                <ContentRenderer content={currentSection.content} sectionId={currentSection.id} />
+              </div>
             )}
 
-            <div className="mt-12 pt-8 border-t border-[#1e2329]">
+            <div className="mt-16 pt-8 border-t border-[#1e2329]">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="text-xs text-gray-500">
-                    <p>Flip Finance - Solana DeFi Trading Terminal</p>
-                    <p>Your keys, your crypto</p>
-                  </div>
-                <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-xs text-gray-600">Flip Finance</p>
+                  <p className="text-[10px] text-gray-700">Your keys, your crypto</p>
+                </div>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={downloadPDF}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#1e2329] rounded-lg text-xs text-gray-400 hover:text-white hover:bg-[#2b3139] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#1e2329] rounded-xl text-xs text-gray-400 hover:text-white hover:bg-[#2b3139] transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Download PDF
+                    PDF
                   </button>
                   <a
                     href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-[#1e2329] rounded-lg text-xs text-gray-400 hover:text-white hover:bg-[#2b3139] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#1e2329] rounded-xl text-xs text-gray-400 hover:text-white hover:bg-[#2b3139] transition-colors"
                   >
                     <XIcon className="w-4 h-4" />
                     {DEV_TWITTER}
@@ -668,20 +783,16 @@ export default function DocsPage() {
           </div>
         </main>
 
-        <aside className="hidden lg:flex w-72 flex-col border-l border-[#1e2329] bg-[#0d1117] fixed right-0 top-[49px] bottom-0">
-          <div className="p-4 border-b border-[#1e2329]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#02c076]" />
-                <h1 className="font-bold text-white">Documentation</h1>
+        <aside className="hidden lg:flex w-72 flex-col border-l border-[#1e2329] bg-[#0b0e11]/80 backdrop-blur-xl fixed right-0 top-[49px] bottom-0 z-10">
+          <div className="p-5 border-b border-[#1e2329]">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#02c076] to-emerald-400">
+                <BookOpen className="w-5 h-5 text-black" />
               </div>
-              <button
-                onClick={downloadPDF}
-                className="p-2 hover:bg-[#1e2329] rounded-lg transition-colors group"
-                title="Download PDF"
-              >
-                <Download className="w-4 h-4 text-gray-500 group-hover:text-[#02c076]" />
-              </button>
+              <div>
+                <h1 className="font-bold text-white">Documentation</h1>
+                <p className="text-[10px] text-gray-500">Flip Finance v1.0</p>
+              </div>
             </div>
           </div>
           
@@ -691,58 +802,77 @@ export default function DocsPage() {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm transition-colors",
+                  "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-all",
                   activeSection === section.id
-                    ? "bg-[#02c076]/10 text-[#02c076]"
-                    : "text-gray-400 hover:text-white hover:bg-[#1e2329]"
+                    ? "bg-gradient-to-r from-[#02c076]/20 to-transparent text-[#02c076]"
+                    : "text-gray-500 hover:text-white hover:bg-[#1e2329]/50"
                 )}
               >
-                <section.icon className="w-4 h-4 flex-shrink-0" />
-                {section.title}
+                <div className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  activeSection === section.id
+                    ? "bg-[#02c076]/20"
+                    : "bg-[#1e2329] group-hover:bg-[#2b3139]"
+                )}>
+                  <section.icon className="w-4 h-4" />
+                </div>
+                <span className="font-medium">{section.title}</span>
+                {activeSection === section.id && (
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                )}
               </button>
             ))}
           </nav>
           
           <div className="p-4 border-t border-[#1e2329] space-y-3">
-            <div className="bg-[#1e2329] rounded-xl p-4">
-              <h3 className="text-xs font-medium text-white mb-3">Contact Developer</h3>
+            <div className="bg-[#1e2329]/50 rounded-xl p-4">
+              <h3 className="text-xs font-bold text-white mb-3">Quick Contact</h3>
               <div className="space-y-2">
                 <button
                   onClick={copyEmail}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
                 >
                   <div className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-[#02c076]" />
-                    <span className="text-gray-400">{DEV_EMAIL}</span>
+                    <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_EMAIL}</span>
                   </div>
                   {copied ? (
                     <Check className="w-3.5 h-3.5 text-[#02c076]" />
                   ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-500" />
+                    <Copy className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
                   )}
                 </button>
                 <a
                   href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-3 py-2 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
                 >
                   <div className="flex items-center gap-2">
                     <XIcon className="w-3.5 h-3.5 text-white" />
-                    <span className="text-gray-400">{DEV_TWITTER}</span>
+                    <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_TWITTER}</span>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
                 </a>
               </div>
             </div>
             
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#02c076] text-black text-sm font-bold rounded-lg hover:bg-[#02a566] transition-colors"
-            >
-              Start Trading
-              <ExternalLink className="w-4 h-4" />
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={downloadPDF}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e2329] text-gray-400 text-xs font-medium rounded-xl hover:bg-[#2b3139] hover:text-white transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+              <Link
+                href="/"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#02c076] to-emerald-400 text-black text-xs font-bold rounded-xl hover:opacity-90 transition-opacity"
+              >
+                Trade
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </aside>
       </div>
