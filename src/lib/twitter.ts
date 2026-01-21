@@ -1,5 +1,9 @@
 import { TwitterApi } from 'twitter-api-v2';
 
+const apiKey = process.env.TWITTER_API_KEY;
+const apiSecret = process.env.TWITTER_API_SECRET;
+const accessToken = process.env.TWITTER_ACCESS_TOKEN;
+const accessSecret = process.env.TWITTER_ACCESS_SECRET;
 const bearerToken = process.env.TWITTER_BEARER_TOKEN;
 
 let client: TwitterApi | null = null;
@@ -8,16 +12,25 @@ const cache = new Map<string, { data: TweetData[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
 export function getTwitterClient() {
-  if (!bearerToken) {
-    console.warn("Twitter Bearer Token not configured");
-    return null;
+  if (client) return client.readOnly;
+  
+  if (apiKey && apiSecret && accessToken && accessSecret) {
+    client = new TwitterApi({
+      appKey: apiKey,
+      appSecret: apiSecret,
+      accessToken: accessToken,
+      accessSecret: accessSecret,
+    });
+    return client.readOnly;
   }
   
-  if (!client) {
+  if (bearerToken) {
     client = new TwitterApi(bearerToken);
+    return client.readOnly;
   }
   
-  return client.readOnly;
+  console.warn("Twitter API credentials not configured");
+  return null;
 }
 
 export interface TweetData {
@@ -207,47 +220,7 @@ function parseBullXMedia(tweet: any) {
 }
 
 function generateFallbackTweets(query: string): TweetData[] {
-  const keywords = query.toLowerCase().split(' ').filter(w => w.length > 3 && !w.startsWith('-') && !w.startsWith('is:'));
-  const mainKeyword = keywords[0] || 'crypto';
-  
-  const templates = [
-    `Just spotted some serious ${mainKeyword} activity 👀 Smart money moving in? This could be interesting`,
-    `${mainKeyword.toUpperCase()} looking bullish rn. Volume is picking up significantly 📈 NFA but I'm watching closely`,
-    `Been researching ${mainKeyword} all week. The fundamentals look solid 💎 Team is shipping`,
-    `Anyone else watching ${mainKeyword}? Chart structure is forming a nice pattern here`,
-    `The ${mainKeyword} community is growing fast. Lots of alpha being shared in the TG`,
-    `Whale alert on ${mainKeyword}! Big bags being accumulated by known wallets 🐋`,
-    `Accumulation on ${mainKeyword} is clear. Ready for the next leg up 🚀`,
-    `Social metrics for ${mainKeyword} are through the roof. Sentiment is shifting fast.`,
-  ];
-
-  const authors = [
-    { name: 'Crypto Trader', username: 'crypto_trader', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader&backgroundColor=1e2329' },
-    { name: 'Degen Alpha', username: 'degen_alpha', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=degen&backgroundColor=1e2329' },
-    { name: 'Sol Maxi', username: 'sol_maxi', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=solana&backgroundColor=1e2329' },
-    { name: 'Whale Watcher', username: 'whale_watcher', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=whale&backgroundColor=1e2329' },
-  ];
-
-  return templates.slice(0, 5).map((text, i) => {
-    const author = authors[i % authors.length];
-    return {
-      id: `fallback_${Date.now()}_${i}`,
-      text,
-      author: {
-        id: `user_${i}`,
-        name: author.name,
-        username: author.username,
-        profileImageUrl: author.avatar,
-      },
-      createdAt: new Date(Date.now() - i * 600000).toISOString(),
-      metrics: {
-        likes: 100 + i * 20,
-        retweets: 20 + i * 5,
-        replies: 10 + i,
-        impressions: 1000 + i * 500,
-      },
-    };
-  });
+  return [];
 }
 
 export async function getCryptoTweets(tokenSymbol: string): Promise<TweetData[]> {

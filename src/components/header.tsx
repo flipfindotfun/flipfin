@@ -137,97 +137,100 @@ export function Header() {
   };
 
   return (
-    <header className="flex items-center px-2 sm:px-4 h-12 gap-1.5 sm:gap-4 border-b border-[#1e2329] bg-[#0d1117]">
-      <Link href="/" className="flex items-center gap-1.5 flex-shrink-0">
-        <img src="/logo.png" alt="Flip Finance" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" />
-        <span className="font-bold text-white text-xs sm:text-sm tracking-tight hidden xs:block">Flip</span>
-      </Link>
-      <div className="flex-1 min-w-0 max-w-xs sm:max-w-lg relative" ref={containerRef}>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <Input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setShowResults(true);
-            }}
-            onFocus={() => setShowResults(true)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search or paste CA..."
-            className="bg-[#1e2329] border-[#2b3139] pl-8 pr-7 h-8 sm:h-9 text-[10px] sm:text-xs focus:border-[#02c076]/50 rounded-lg w-full"
-          />
-          {query && (
-            <button 
-              onClick={() => { setQuery(""); setResults([]); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+      <header className="flex items-center justify-between px-3 sm:px-4 h-12 border-b border-[#1e2329] bg-[#0d1117]">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <img src="/logo.png" alt="Flip Finance" className="w-6 h-6 object-contain" />
+            <span className="font-bold text-white text-sm tracking-tight hidden sm:block">Flip</span>
+          </Link>
+          
+          <div className="w-48 sm:w-64 md:w-80 relative" ref={containerRef}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setShowResults(true);
+                }}
+                onFocus={() => setShowResults(true)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search or paste CA..."
+                className="bg-[#1e2329] border-[#2b3139] pl-9 pr-8 h-8 text-xs focus:border-[#02c076]/50 rounded-lg w-full"
+              />
+              {query && (
+                <button 
+                  onClick={() => { setQuery(""); setResults([]); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {showResults && (query.length >= 2 || results.length > 0) && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[#0d1117] border border-[#1e2329] rounded-lg shadow-xl z-50 max-h-[400px] overflow-y-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#02c076]" />
+                  </div>
+                ) : results.length > 0 ? (
+                  <div className="py-1">
+                    {results.map((result) => (
+                      <button
+                        key={result.address}
+                        onClick={() => handleSelect(result)}
+                        className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#1e2329] transition-colors"
+                      >
+                        {result.logoURI ? (
+                          <img src={result.logoURI} alt={result.symbol} className="w-8 h-8 rounded-lg" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-[#1e2329] flex items-center justify-center text-xs font-bold text-gray-500">
+                            {result.symbol.slice(0, 2)}
+                          </div>
+                        )}
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm">{result.symbol}</span>
+                            <span className="text-gray-500 text-xs truncate">{result.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <span className="text-gray-400">MC ${formatNumber(result.marketCap)}</span>
+                            <span className={cn(
+                              "font-bold",
+                              result.priceChange24h >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
+                            )}>
+                              {result.priceChange24h >= 0 ? "+" : ""}{result.priceChange24h.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-mono text-white">${result.price.toFixed(result.price < 0.01 ? 8 : 4)}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : query.length >= 2 ? (
+                  <div className="py-8 text-center text-gray-500 text-sm">
+                    {query.length >= 32 ? (
+                      <button 
+                        onClick={() => { router.push(`/trade/${query}`); setShowResults(false); }}
+                        className="text-[#02c076] hover:underline"
+                      >
+                        Go to token: {query.slice(0, 8)}...{query.slice(-4)}
+                      </button>
+                    ) : (
+                      "No tokens found"
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
 
-        {showResults && (query.length >= 2 || results.length > 0) && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-[#0d1117] border border-[#1e2329] rounded-lg shadow-xl z-50 max-h-[400px] overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-[#02c076]" />
-              </div>
-            ) : results.length > 0 ? (
-              <div className="py-1">
-                {results.map((result) => (
-                  <button
-                    key={result.address}
-                    onClick={() => handleSelect(result)}
-                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#1e2329] transition-colors"
-                  >
-                    {result.logoURI ? (
-                      <img src={result.logoURI} alt={result.symbol} className="w-8 h-8 rounded-lg" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-[#1e2329] flex items-center justify-center text-xs font-bold text-gray-500">
-                        {result.symbol.slice(0, 2)}
-                      </div>
-                    )}
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{result.symbol}</span>
-                        <span className="text-gray-500 text-xs truncate">{result.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <span className="text-gray-400">MC ${formatNumber(result.marketCap)}</span>
-                        <span className={cn(
-                          "font-bold",
-                          result.priceChange24h >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
-                        )}>
-                          {result.priceChange24h >= 0 ? "+" : ""}{result.priceChange24h.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-mono text-white">${result.price.toFixed(result.price < 0.01 ? 8 : 4)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : query.length >= 2 ? (
-              <div className="py-8 text-center text-gray-500 text-sm">
-                {query.length >= 32 ? (
-                  <button 
-                    onClick={() => { router.push(`/trade/${query}`); setShowResults(false); }}
-                    className="text-[#02c076] hover:underline"
-                  >
-                    Go to token: {query.slice(0, 8)}...{query.slice(-4)}
-                  </button>
-                ) : (
-                  "No tokens found"
-                )}
-              </div>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-<div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link 
             href="/flow"
             className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-[#02c076]/20 to-[#8b5cf6]/20 border border-[#02c076]/30 rounded-lg hover:border-[#02c076]/50 transition-colors"
@@ -251,10 +254,10 @@ export function Header() {
           </Link>
           <Link 
             href="/rewards"
-            className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
           >
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-[10px] sm:text-xs font-bold text-white tabular-nums">
+            <span className="text-xs font-bold text-white tabular-nums">
               {profile?.total_points ? Math.floor(profile.total_points).toLocaleString() : "0"}
             </span>
           </Link>
@@ -310,16 +313,16 @@ export function Header() {
             <PieChart className="w-4 h-4 text-[#02c076]" />
           </Link>
 
-          <div className="hidden sm:flex items-center gap-1 px-1.5 sm:px-2 py-1 bg-[#1e2329] rounded-lg">
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-[#1e2329] rounded-lg">
             <div className="w-1.5 h-1.5 rounded-full bg-[#02c076] animate-pulse" />
-            <span className="text-[9px] sm:text-[10px] text-gray-500">SOL</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white font-mono">
+            <span className="text-[10px] text-gray-500">SOL</span>
+            <span className="text-xs font-bold text-white font-mono">
               ${solPrice > 0 ? solPrice.toFixed(0) : "---"}
             </span>
           </div>
           
           <WalletButton />
         </div>
-    </header>
+      </header>
   );
 }

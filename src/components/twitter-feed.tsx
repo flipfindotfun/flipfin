@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { XIcon } from "@/components/icons";
-import { Loader2, Heart, Repeat2, MessageCircle, RefreshCw, X } from "lucide-react";
+import { Loader2, Heart, Repeat2, MessageCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
@@ -39,10 +39,11 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setLoading] = useState(true);
   const [sentiment, setSentiment] = useState<any>(null);
-  const [selectedTweet, setSelectedTweet] = useState<Tweet | null>(null);
+  const [error, setError] = useState(false);
 
   const fetchTweets = async () => {
     setLoading(true);
+    setError(false);
     try {
       const params = new URLSearchParams();
       if (query) params.set("q", query);
@@ -54,8 +55,12 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
       
       setTweets(data.tweets || []);
       setSentiment(data.analysis);
+      if (data.meta?.error) {
+        setError(true);
+      }
     } catch (err) {
       console.error("Failed to fetch tweets:", err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -88,7 +93,7 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
           <span className="text-sm font-medium text-white">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          {sentiment && (
+          {sentiment && tweets.length > 0 && (
             <span className={cn("px-2 py-0.5 text-[10px] font-medium rounded-full capitalize", getSentimentColor(sentiment.sentiment))}>
               {sentiment.sentiment} ({sentiment.sentimentScore}%)
             </span>
@@ -109,8 +114,23 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
             <Loader2 className="w-5 h-5 animate-spin text-white" />
           </div>
         ) : tweets.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 text-sm">
-            No tweets found
+          <div className="text-center py-8 px-4">
+            <AlertCircle className="w-8 h-8 mx-auto mb-3 text-gray-600" />
+            <p className="text-sm text-gray-400 font-medium mb-1">
+              {error ? "Twitter API rate limited" : "No tweets found"}
+            </p>
+            <p className="text-xs text-gray-600">
+              {error 
+                ? "Real-time data temporarily unavailable. Try again later."
+                : "No recent tweets match this query."
+              }
+            </p>
+            <button
+              onClick={fetchTweets}
+              className="mt-3 px-4 py-1.5 text-xs bg-[#1e2329] text-gray-400 rounded-lg hover:bg-[#2b3139] transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : (
           <div className="divide-y divide-[#1e2329]">
@@ -200,7 +220,7 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
         )}
       </div>
 
-      {sentiment && sentiment.botRatio > 0 && (
+      {sentiment && sentiment.botRatio > 0 && tweets.length > 0 && (
         <div className="p-2 border-t border-[#1e2329] bg-[#1e2329]/50">
           <div className="flex items-center justify-between text-[10px]">
             <span className="text-gray-500">Bot Activity</span>
