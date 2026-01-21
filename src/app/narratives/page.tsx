@@ -299,7 +299,7 @@ export default function NarrativesPage() {
               )}
             </div>
 
-            <div className="lg:w-80 space-y-4">
+            <div className="lg:w-80 space-y-4 hidden lg:block">
               {selectedNarrative && (
                 <AIAnalysisWidget
                   type="narrative"

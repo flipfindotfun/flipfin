@@ -14,6 +14,9 @@ export interface Token {
   platform?: 'pumpfun' | 'raydium' | 'pumpswap' | 'unknown' | 'meteora';
   security?: TokenSecurity;
   pairAddress?: string;
+  twitter?: string | null;
+  telegram?: string | null;
+  website?: string | null;
 }
 
 export interface TokenSecurity {

@@ -164,9 +164,9 @@ export default function RewardsPage() {
                   EARN <span className="text-[#02c076]">POINTS</span> FOR EVERY TRADE
                 </h1>
                 <p className="text-gray-400 text-sm sm:text-base max-w-lg">
-                  Trade on Flip Finance and earn points. The more you trade, the more points you get. 
-                  Invite friends to earn even more from their trades!
-                </p>
+                    Trade on Flip Finance and earn points. Airdrop coming SOON - no ETA yet. 
+                    Stay updated and keep earning to maximize your allocation!
+                  </p>
               </div>
             
             <div className="bg-[#1e2329]/80 backdrop-blur-sm border border-[#2b3139] rounded-2xl p-6 min-w-[200px] flex flex-col items-center justify-center text-center shadow-2xl">

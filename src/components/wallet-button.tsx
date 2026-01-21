@@ -127,9 +127,10 @@ export function WalletButton() {
         >
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-[#02c076]" />
-            <span className="font-mono text-[10px]">{shortenAddress(publicKey, 3)}</span>
-            <span className="text-[#02c076] font-bold text-[10px]">{balance.toFixed(2)}</span>
-            <ChevronDown className="w-3 h-3 text-gray-500" />
+            <span className="font-mono text-[10px] hidden sm:inline">{shortenAddress(publicKey, 3)}</span>
+            <span className="text-[#02c076] font-bold text-[10px] hidden sm:inline">{balance.toFixed(2)}</span>
+            <Wallet className="w-4 h-4 sm:hidden text-[#02c076]" />
+            <ChevronDown className="w-3 h-3 text-gray-500 hidden sm:block" />
           </div>
         </Button>
       </DropdownMenuTrigger>

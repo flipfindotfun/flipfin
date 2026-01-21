@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant xs (@media (min-width: 475px));
@@ -188,4 +190,59 @@ input[type="number"] {
 
 .glow-red {
   box-shadow: 0 0 20px rgba(246, 70, 93, 0.3);
+}
+
+.react-grid-layout {
+  position: relative;
+}
+
+.react-grid-item {
+  transition: none !important;
+}
+
+.react-grid-item.cssTransforms {
+  transition: transform 100ms ease !important;
+}
+
+.react-grid-item.resizing {
+  z-index: 100;
+  opacity: 0.9;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 100;
+  opacity: 0.9;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: transparent;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(2, 192, 118, 0.5);
+  border-bottom: 2px solid rgba(2, 192, 118, 0.5);
+}
+
+.react-grid-item:hover > .react-resizable-handle::after {
+  border-color: #02c076;
+}
+
+.panel-drag-handle {
+  cursor: move;
+}
+
+.panel-drag-handle:active {
+  cursor: grabbing;
 }

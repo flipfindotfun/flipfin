@@ -16,11 +16,13 @@ import {
   Gift,
   Eye,
   FileText,
+  Coins,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
   { icon: Search, label: "Explore", href: "/" },
+  { icon: Coins, label: "Tokens", href: "/tokens" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
   { icon: Gift, label: "Rewards", href: "/rewards" },
   { icon: Eye, label: "Tracker", href: "/tracker" },
@@ -91,6 +93,14 @@ export function Sidebar() {
   );
 }
 
+const mobileNavItems = [
+  { icon: Search, label: "Explore", href: "/" },
+  { icon: Coins, label: "Tokens", href: "/tokens" },
+  { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
+  { icon: Gift, label: "Rewards", href: "/rewards" },
+  { icon: Eye, label: "Tracker", href: "/tracker" },
+];
+
 export function MobileNav() {
   const pathname = usePathname();
   const isTradeRoute = pathname.startsWith("/trade/");
@@ -99,7 +109,7 @@ export function MobileNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex h-14 border-t border-[#1e2329] bg-[#0b0e11]">
-      {navItems.slice(0, 5).map((item) => {
+      {mobileNavItems.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
@@ -111,7 +121,6 @@ export function MobileNav() {
             )}
           >
             <item.icon className="w-5 h-5" />
-            <span className="text-[9px] font-medium">{item.label}</span>
           </Link>
         );
       })}

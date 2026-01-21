@@ -48,22 +48,42 @@ export async function GET() {
           const existing = tokenMap.get(pair.baseToken.address);
           const liquidity = pair.liquidity?.usd || 0;
           
-          if (!existing || liquidity > existing.liquidity) {
-            tokenMap.set(pair.baseToken.address, {
-              address: pair.baseToken.address,
-              symbol: pair.baseToken.symbol,
-              name: pair.baseToken.name,
-              decimals: 9,
-              price: parseFloat(pair.priceUsd) || 0,
-              priceChange24h: pair.priceChange?.h24 || 0,
-              volume24h: pair.volume?.h24 || 0,
-              liquidity: liquidity,
-              marketCap: pair.fdv || 0,
-              createdAt: pair.pairCreatedAt,
-              logoURI: pair.info?.imageUrl,
-              platform: pair.pairAddress?.toLowerCase().includes('pump') ? "pumpfun" : "raydium",
-            });
-          }
+            if (!existing || liquidity > existing.liquidity) {
+              const socials = pair.info?.socials || [];
+              const websites = pair.info?.websites || [];
+              const twitterSocial = socials.find((s: any) => s.platform === "twitter");
+              const telegramSocial = socials.find((s: any) => s.platform === "telegram");
+              
+              let twitterUrl = null;
+              if (twitterSocial?.handle) {
+                const handle = twitterSocial.handle.replace('@', '').replace('https://twitter.com/', '').replace('https://x.com/', '');
+                twitterUrl = `https://x.com/${handle}`;
+              }
+              
+              let telegramUrl = null;
+              if (telegramSocial?.handle) {
+                const handle = telegramSocial.handle.replace('@', '').replace('https://t.me/', '');
+                telegramUrl = `https://t.me/${handle}`;
+              }
+              
+              tokenMap.set(pair.baseToken.address, {
+                  address: pair.baseToken.address,
+                  symbol: pair.baseToken.symbol,
+                  name: pair.baseToken.name,
+                  decimals: 9,
+                  price: parseFloat(pair.priceUsd) || 0,
+                  priceChange24h: pair.priceChange?.h24 || 0,
+                  volume24h: pair.volume?.h24 || 0,
+                  liquidity: liquidity,
+                  marketCap: pair.fdv || 0,
+                  createdAt: pair.pairCreatedAt,
+                  logoURI: pair.info?.imageUrl,
+                  platform: pair.pairAddress?.toLowerCase().includes('pump') ? "pumpfun" : "raydium",
+                  twitter: twitterUrl,
+                  telegram: telegramUrl,
+                  website: websites[0]?.url || null,
+                });
+            }
         });
       }
 

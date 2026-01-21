@@ -116,7 +116,7 @@ async function fetchDexScreenerTrending(): Promise<TokenInfo[]> {
         }));
       }
       
-      if (tokens.length >= 15) break;
+          if (tokens.length >= 25) break;
     }
     
     return tokens;
@@ -244,7 +244,7 @@ export async function GET(req: NextRequest) {
     let tokens = Array.from(tokenMap.values())
       .filter(t => t.symbol && t.symbol !== "???")
       .sort((a, b) => b.volume24h - a.volume24h)
-      .slice(0, 25);
+      .slice(0, 20);
 
     if (tokens.length < 10) {
       tokens = getFallbackMemeCoins();

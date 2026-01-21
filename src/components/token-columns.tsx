@@ -1,19 +1,39 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Loader2, Filter, Sparkles, Rocket, GraduationCap, Clock, Globe, RefreshCw, Star } from "lucide-react";
-import { XIcon } from "@/components/icons";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Loader2, Filter, Sparkles, Rocket, GraduationCap, Clock, Globe, RefreshCw, Star, X, Check } from "lucide-react";
+import { XIcon, TelegramIcon } from "@/components/icons";
 import { Token, formatNumber, timeAgo } from "@/lib/types";
 import { useApp } from "@/lib/context";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useProfile, Favorite } from "@/hooks/use-profile";
 
+interface FilterOptions {
+  minMC: number | null;
+  maxMC: number | null;
+  minVolume: number | null;
+  minLiquidity: number | null;
+  onlyWithTwitter: boolean;
+  onlyWithTelegram: boolean;
+}
+
+const defaultFilters: FilterOptions = {
+  minMC: null,
+  maxMC: null,
+  minVolume: null,
+  minLiquidity: null,
+  onlyWithTwitter: false,
+  onlyWithTelegram: false,
+};
+
 export function TokenColumns() {
   const { tokens, loading, loadingMore, hasMore, loadMore } = useApp();
   const { favorites, toggleFavorite } = useProfile();
   const [activeColumn, setActiveColumn] = useState<"new" | "graduating" | "graduated" | "favorites">("new");
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>(defaultFilters);
   const router = useRouter();
   
   const observerTarget = useRef(null);
@@ -38,19 +58,47 @@ export function TokenColumns() {
     }
   }, [tokens]);
 
-  const newTokens = tokens.filter(t => {
-    const age = t.createdAt ? Date.now() - t.createdAt : Infinity;
-    return age < 3600000;
-  });
+  const applyFilters = (tokenList: Token[]) => {
+    return tokenList.filter(t => {
+      if (filters.minMC !== null && t.marketCap < filters.minMC) return false;
+      if (filters.maxMC !== null && t.marketCap > filters.maxMC) return false;
+      if (filters.minVolume !== null && t.volume24h < filters.minVolume) return false;
+      if (filters.minLiquidity !== null && t.liquidity < filters.minLiquidity) return false;
+      if (filters.onlyWithTwitter && !t.twitter) return false;
+      if (filters.onlyWithTelegram && !t.telegram) return false;
+      return true;
+    });
+  };
+
+  const hasActiveFilters = filters.minMC !== null || filters.maxMC !== null || 
+    filters.minVolume !== null || filters.minLiquidity !== null ||
+    filters.onlyWithTwitter || filters.onlyWithTelegram;
+
+  const newTokens = useMemo(() => {
+    const filtered = tokens.filter(t => {
+      const age = t.createdAt ? Date.now() - t.createdAt : Infinity;
+      return age < 3600000;
+    });
+    return applyFilters(filtered);
+  }, [tokens, filters]);
   
-  const graduatingTokens = tokens.filter(t => {
-    const age = t.createdAt ? Date.now() - t.createdAt : 0;
-    return age >= 3600000 && t.marketCap < 100000;
-  });
+  const graduatingTokens = useMemo(() => {
+    const filtered = tokens.filter(t => {
+      const age = t.createdAt ? Date.now() - t.createdAt : 0;
+      return age >= 3600000 && t.marketCap < 100000;
+    });
+    return applyFilters(filtered);
+  }, [tokens, filters]);
   
-  const graduatedTokens = tokens.filter(t => t.marketCap >= 100000);
+  const graduatedTokens = useMemo(() => {
+    const filtered = tokens.filter(t => t.marketCap >= 100000);
+    return applyFilters(filtered);
+  }, [tokens, filters]);
   
-  const favoriteTokens = tokens.filter(t => favorites.some(f => f.token_address === t.address));
+  const favoriteTokens = useMemo(() => {
+    const filtered = tokens.filter(t => favorites.some(f => f.token_address === t.address));
+    return applyFilters(filtered);
+  }, [tokens, favorites, filters]);
 
   const handleTokenClick = (token: Token) => {
     router.push(`/trade/${token.address}`);
@@ -64,8 +112,15 @@ export function TokenColumns() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="md:hidden flex border-b border-[#1e2329] bg-[#0b0e11]">
+      <div className="flex flex-col h-full">
+        {showFilters && (
+          <FilterModal 
+            filters={filters} 
+            setFilters={setFilters} 
+            onClose={() => setShowFilters(false)} 
+          />
+        )}
+        <div className="md:hidden flex border-b border-[#1e2329] bg-[#0b0e11]">
         <TabButton 
           icon={<Sparkles className="w-3.5 h-3.5" />}
           label="New" 
@@ -96,77 +151,85 @@ export function TokenColumns() {
         />
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className={cn(
-          "flex-1 flex flex-col border-r border-[#1e2329] min-w-0",
-          activeColumn !== "new" && "hidden md:flex"
-        )}>
-          <ColumnHeader 
-            icon={<Sparkles className="w-4 h-4 text-[#02c076]" />}
-            title="New Creations" 
-            count={newTokens.length}
-            lastUpdate={formatLastUpdate()}
-          />
-          <TokenListScroll 
-            tokens={newTokens} 
-            onSelect={handleTokenClick} 
-            loading={loading}
-            observerRef={activeColumn === "new" ? observerTarget : null}
-            favorites={favorites}
-            toggleFavorite={toggleFavorite}
-          />
-        </div>
+        <div className="flex-1 flex overflow-hidden">
+          <div className={cn(
+            "flex-1 flex flex-col border-r border-[#1e2329] min-w-0",
+            activeColumn !== "new" && "hidden md:flex"
+          )}>
+            <ColumnHeader 
+              icon={<Sparkles className="w-4 h-4 text-[#02c076]" />}
+              title="New Creations" 
+              count={newTokens.length}
+              lastUpdate={formatLastUpdate()}
+              onFilterClick={() => setShowFilters(true)}
+              hasActiveFilters={hasActiveFilters}
+            />
+            <TokenListScroll 
+              tokens={newTokens} 
+              onSelect={handleTokenClick} 
+              loading={loading}
+              observerRef={activeColumn === "new" ? observerTarget : null}
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+            />
+          </div>
 
-        <div className={cn(
-          "flex-1 flex flex-col border-r border-[#1e2329] min-w-0",
-          activeColumn !== "graduating" && "hidden md:flex"
-        )}>
-          <ColumnHeader 
-            icon={<Rocket className="w-4 h-4 text-yellow-500" />}
-            title="About to Graduate" 
-            count={graduatingTokens.length}
-            lastUpdate={formatLastUpdate()}
-          />
-          <TokenListScroll 
-            tokens={graduatingTokens} 
-            onSelect={handleTokenClick} 
-            loading={loading}
-            observerRef={activeColumn === "graduating" ? observerTarget : null}
-            favorites={favorites}
-            toggleFavorite={toggleFavorite}
-          />
-        </div>
+          <div className={cn(
+            "flex-1 flex flex-col border-r border-[#1e2329] min-w-0",
+            activeColumn !== "graduating" && "hidden md:flex"
+          )}>
+            <ColumnHeader 
+              icon={<Rocket className="w-4 h-4 text-yellow-500" />}
+              title="About to Graduate" 
+              count={graduatingTokens.length}
+              lastUpdate={formatLastUpdate()}
+              onFilterClick={() => setShowFilters(true)}
+              hasActiveFilters={hasActiveFilters}
+            />
+            <TokenListScroll 
+              tokens={graduatingTokens} 
+              onSelect={handleTokenClick} 
+              loading={loading}
+              observerRef={activeColumn === "graduating" ? observerTarget : null}
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+            />
+          </div>
 
-        <div className={cn(
-          "flex-1 flex flex-col min-w-0",
-          activeColumn !== "graduated" && "hidden md:flex"
-        )}>
-          <ColumnHeader 
-            icon={<GraduationCap className="w-4 h-4 text-[#02c076]" />}
-            title="Graduated" 
-            count={graduatedTokens.length}
-            lastUpdate={formatLastUpdate()}
-          />
-          <TokenListScroll 
-            tokens={graduatedTokens} 
-            onSelect={handleTokenClick} 
-            loading={loading}
-            observerRef={activeColumn === "graduated" ? observerTarget : null}
-            favorites={favorites}
-            toggleFavorite={toggleFavorite}
-          />
-        </div>
+          <div className={cn(
+            "flex-1 flex flex-col min-w-0",
+            activeColumn !== "graduated" && "hidden md:flex"
+          )}>
+            <ColumnHeader 
+              icon={<GraduationCap className="w-4 h-4 text-[#02c076]" />}
+              title="Graduated" 
+              count={graduatedTokens.length}
+              lastUpdate={formatLastUpdate()}
+              onFilterClick={() => setShowFilters(true)}
+              hasActiveFilters={hasActiveFilters}
+            />
+            <TokenListScroll 
+              tokens={graduatedTokens} 
+              onSelect={handleTokenClick} 
+              loading={loading}
+              observerRef={activeColumn === "graduated" ? observerTarget : null}
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+            />
+          </div>
 
-        <div className={cn(
-          "flex-1 flex flex-col min-w-0 bg-[#0d1117]/50",
-          activeColumn !== "favorites" && "hidden"
-        )}>
-          <ColumnHeader 
-            icon={<Star className="w-4 h-4 text-yellow-500" />}
-            title="My Favorites" 
-            count={favoriteTokens.length}
-            lastUpdate={formatLastUpdate()}
-          />
+          <div className={cn(
+            "flex-1 flex flex-col min-w-0 bg-[#0d1117]/50",
+            activeColumn !== "favorites" && "hidden"
+          )}>
+            <ColumnHeader 
+              icon={<Star className="w-4 h-4 text-yellow-500" />}
+              title="My Favorites" 
+              count={favoriteTokens.length}
+              lastUpdate={formatLastUpdate()}
+              onFilterClick={() => setShowFilters(true)}
+              hasActiveFilters={hasActiveFilters}
+            />
           <TokenListScroll 
             tokens={favoriteTokens} 
             onSelect={handleTokenClick} 
@@ -210,11 +273,13 @@ function TabButton({ icon, label, count, active, onClick }: {
   );
 }
 
-function ColumnHeader({ icon, title, count, lastUpdate }: { 
+function ColumnHeader({ icon, title, count, lastUpdate, onFilterClick, hasActiveFilters }: { 
   icon: React.ReactNode; 
   title: string; 
   count: number;
   lastUpdate: string;
+  onFilterClick: () => void;
+  hasActiveFilters: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e2329] bg-[#0d1117]">
@@ -228,8 +293,17 @@ function ColumnHeader({ icon, title, count, lastUpdate }: {
           <div className="w-1.5 h-1.5 rounded-full bg-[#02c076] animate-pulse" />
           <span className="text-[10px] text-gray-500">{lastUpdate}</span>
         </div>
-        <button className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-300 px-2 py-1 rounded hover:bg-[#1e2329]">
+        <button 
+          onClick={onFilterClick}
+          className={cn(
+            "flex items-center gap-1 text-[10px] px-2 py-1 rounded",
+            hasActiveFilters 
+              ? "text-[#02c076] bg-[#02c076]/10 hover:bg-[#02c076]/20" 
+              : "text-gray-500 hover:text-gray-300 hover:bg-[#1e2329]"
+          )}
+        >
           <Filter className="w-3 h-3" />
+          {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#02c076]" />}
         </button>
       </div>
     </div>
@@ -352,15 +426,40 @@ function TokenCard({ token, onClick, favorites, toggleFavorite }: {
             </span>
           </div>
 
-          <div className="flex items-center justify-between mt-1.5">
-            <div className="flex items-center gap-1.5">
-              <button className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-gray-400" onClick={(e) => e.stopPropagation()}>
-                <XIcon className="w-3 h-3" />
-              </button>
-              <button className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-gray-400" onClick={(e) => e.stopPropagation()}>
-                <Globe className="w-3 h-3" />
-              </button>
-            </div>
+              <div className="flex items-center justify-between mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  {token.twitter && (
+                    <button 
+                      className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-gray-400" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(token.twitter!, "_blank");
+                      }}
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  )}
+                  {token.telegram && (
+                    <button 
+                      className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-gray-400" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(token.telegram!, "_blank");
+                      }}
+                    >
+                      <TelegramIcon className="w-3 h-3" />
+                    </button>
+                  )}
+                  <button 
+                    className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-gray-400" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`https://solscan.io/token/${token.address}`, "_blank");
+                    }}
+                  >
+                    <Globe className="w-3 h-3" />
+                  </button>
+                </div>
             
             <div className="flex items-center gap-2">
               <MiniChart isPositive={isPositive} priceChange={token.priceChange24h} />
@@ -396,5 +495,133 @@ function MiniChart({ isPositive, priceChange }: { isPositive: boolean; priceChan
     <svg width="60" height="24" className="flex-shrink-0">
       <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function FilterModal({ filters, setFilters, onClose }: {
+  filters: FilterOptions;
+  setFilters: (filters: FilterOptions) => void;
+  onClose: () => void;
+}) {
+  const [localFilters, setLocalFilters] = useState(filters);
+  
+  const handleApply = () => {
+    setFilters(localFilters);
+    onClose();
+  };
+  
+  const handleReset = () => {
+    setLocalFilters(defaultFilters);
+    setFilters(defaultFilters);
+  };
+
+  const parseNumber = (value: string): number | null => {
+    if (!value) return null;
+    const num = parseFloat(value.replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? null : num;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[#0d1117] border border-[#1e2329] rounded-xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2329]">
+          <h2 className="text-lg font-semibold text-white">Filters</h2>
+          <button onClick={onClose} className="p-1 text-gray-500 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">Market Cap</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Min"
+                value={localFilters.minMC ?? ''}
+                onChange={(e) => setLocalFilters({ ...localFilters, minMC: parseNumber(e.target.value) })}
+                className="flex-1 px-3 py-2 text-sm bg-[#1e2329] border border-[#2b3139] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+              />
+              <input
+                type="text"
+                placeholder="Max"
+                value={localFilters.maxMC ?? ''}
+                onChange={(e) => setLocalFilters({ ...localFilters, maxMC: parseNumber(e.target.value) })}
+                className="flex-1 px-3 py-2 text-sm bg-[#1e2329] border border-[#2b3139] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">Min Volume (24h)</label>
+            <input
+              type="text"
+              placeholder="e.g. 10000"
+              value={localFilters.minVolume ?? ''}
+              onChange={(e) => setLocalFilters({ ...localFilters, minVolume: parseNumber(e.target.value) })}
+              className="w-full px-3 py-2 text-sm bg-[#1e2329] border border-[#2b3139] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">Min Liquidity</label>
+            <input
+              type="text"
+              placeholder="e.g. 5000"
+              value={localFilters.minLiquidity ?? ''}
+              onChange={(e) => setLocalFilters({ ...localFilters, minLiquidity: parseNumber(e.target.value) })}
+              className="w-full px-3 py-2 text-sm bg-[#1e2329] border border-[#2b3139] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+            />
+          </div>
+          
+          <div className="space-y-3">
+            <label className="text-sm text-gray-400">Social Requirements</label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div 
+                onClick={() => setLocalFilters({ ...localFilters, onlyWithTwitter: !localFilters.onlyWithTwitter })}
+                className={cn(
+                  "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                  localFilters.onlyWithTwitter 
+                    ? "bg-[#02c076] border-[#02c076]" 
+                    : "border-[#2b3139] hover:border-gray-500"
+                )}
+              >
+                {localFilters.onlyWithTwitter && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-sm text-white">Only with Twitter/X</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div 
+                onClick={() => setLocalFilters({ ...localFilters, onlyWithTelegram: !localFilters.onlyWithTelegram })}
+                className={cn(
+                  "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                  localFilters.onlyWithTelegram 
+                    ? "bg-[#02c076] border-[#02c076]" 
+                    : "border-[#2b3139] hover:border-gray-500"
+                )}
+              >
+                {localFilters.onlyWithTelegram && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-sm text-white">Only with Telegram</span>
+            </label>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 p-4 border-t border-[#1e2329]">
+          <button
+            onClick={handleReset}
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-400 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleApply}
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#02c076] rounded-lg hover:bg-[#02a566] transition-colors"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -32,7 +32,8 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 const DEV_EMAIL = "developer@flipfin.fun";
-const DEV_TWITTER = "@shyharvs";
+const DEV_TWITTER = "@flipfindotfun";
+const COMMUNITY_X = "https://x.com/i/communities/2013802185507889401";
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -190,7 +191,7 @@ const sections = [
   {
     id: "rewards",
     title: "Rewards",
-    subtitle: "Trade more, earn more",
+    subtitle: "Airdrop Season 1",
     icon: Gift,
     gradient: "from-rose-500 to-red-400",
     content: [
@@ -203,12 +204,12 @@ const sections = [
         ]
       },
       {
-        type: "text",
-        content: "Points convert to $FLIP airdrop allocations at token launch. The more you trade and refer, the larger your allocation."
+        type: "warning",
+        content: "Airdrop coming SOON - no ETA yet. Stay updated by following us on X. The more points you accumulate now, the larger your allocation will be when the airdrop drops!"
       },
       {
         type: "note",
-        content: "Point values and reward structures may change before the airdrop."
+        content: "Point values and reward structures may change before the airdrop. Keep trading and referring to maximize your rewards."
       }
     ]
   },
@@ -295,7 +296,8 @@ const sections = [
       {
         type: "contact",
         email: DEV_EMAIL,
-        twitter: DEV_TWITTER
+        twitter: DEV_TWITTER,
+        community: COMMUNITY_X
       }
     ]
   },
@@ -532,37 +534,56 @@ function ContentRenderer({ content, sectionId }: { content: any[]; sectionId: st
 
           case "contact":
             return (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a
-                  href={`mailto:${block.email}`}
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-[#02c076]/50 transition-all"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#02c076]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative">
-                    <div className="inline-flex p-3 rounded-xl bg-[#02c076]/10 mb-4">
-                      <Mail className="w-6 h-6 text-[#02c076]" />
+              <div key={idx} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <a
+                    href={`mailto:${block.email}`}
+                    className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-[#02c076]/50 transition-all"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#02c076]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="inline-flex p-3 rounded-xl bg-[#02c076]/10 mb-4">
+                        <Mail className="w-6 h-6 text-[#02c076]" />
+                      </div>
+                      <h4 className="font-bold text-white mb-1">Email</h4>
+                      <p className="text-sm text-gray-500">{block.email}</p>
                     </div>
-                    <h4 className="font-bold text-white mb-1">Email</h4>
-                    <p className="text-sm text-gray-500">{block.email}</p>
-                  </div>
-                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-[#02c076] group-hover:translate-x-1 transition-all" />
-                </a>
-                <a
-                  href={`https://x.com/${block.twitter.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-white/30 transition-all"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative">
-                    <div className="inline-flex p-3 rounded-xl bg-white/10 mb-4">
-                      <XIcon className="w-6 h-6 text-white" />
+                    <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-[#02c076] group-hover:translate-x-1 transition-all" />
+                  </a>
+                  <a
+                    href={`https://x.com/${block.twitter.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e2329] to-[#0b0e11] border border-[#2b3139] p-6 hover:border-white/30 transition-all"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="inline-flex p-3 rounded-xl bg-white/10 mb-4">
+                        <XIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-bold text-white mb-1">X / Twitter</h4>
+                      <p className="text-sm text-gray-500">{block.twitter}</p>
                     </div>
-                    <h4 className="font-bold text-white mb-1">X / Twitter</h4>
-                    <p className="text-sm text-gray-500">{block.twitter}</p>
-                  </div>
-                  <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                </a>
+                    <ArrowRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  </a>
+                </div>
+                {block.community && (
+                  <a
+                    href={block.community}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-2xl bg-gradient-to-r from-[#02c076]/10 to-purple-500/10 border border-[#02c076]/30 p-6 hover:border-[#02c076]/50 transition-all"
+                  >
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-[#02c076] to-purple-500">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-white mb-1">X Community</h4>
+                      <p className="text-sm text-gray-500">Join the Flip Finance community on X</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-[#02c076] group-hover:translate-x-1 transition-all" />
+                  </a>
+                )}
               </div>
             );
 
@@ -825,37 +846,49 @@ export default function DocsPage() {
           </nav>
           
           <div className="p-4 border-t border-[#1e2329] space-y-3">
-            <div className="bg-[#1e2329]/50 rounded-xl p-4">
-              <h3 className="text-xs font-bold text-white mb-3">Quick Contact</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={copyEmail}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
-                >
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-[#02c076]" />
-                    <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_EMAIL}</span>
-                  </div>
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-[#02c076]" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
-                  )}
-                </button>
-                <a
-                  href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
-                >
-                  <div className="flex items-center gap-2">
-                    <XIcon className="w-3.5 h-3.5 text-white" />
-                    <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_TWITTER}</span>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
-                </a>
+              <div className="bg-[#1e2329]/50 rounded-xl p-4">
+                <h3 className="text-xs font-bold text-white mb-3">Quick Contact</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={copyEmail}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-[#02c076]" />
+                      <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_EMAIL}</span>
+                    </div>
+                    {copied ? (
+                      <Check className="w-3.5 h-3.5 text-[#02c076]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
+                    )}
+                  </button>
+                  <a
+                    href={`https://x.com/${DEV_TWITTER.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <XIcon className="w-3.5 h-3.5 text-white" />
+                      <span className="text-gray-400 group-hover:text-white transition-colors">{DEV_TWITTER}</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
+                  </a>
+                  <a
+                    href={COMMUNITY_X}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-[#0b0e11] rounded-lg text-xs hover:bg-[#2b3139] transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-gray-400 group-hover:text-white transition-colors">X Community</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" />
+                  </a>
+                </div>
               </div>
-            </div>
             
             <div className="flex gap-2">
               <button

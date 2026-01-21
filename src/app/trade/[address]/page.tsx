@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Share2, Copy, ExternalLink, Loader2,
   CheckCircle, AlertTriangle, RefreshCw, Wallet, Star, Settings,
-  Globe, MessageCircle, Shield
+  Globe, MessageCircle, Shield, BarChart2, ListOrdered, ShoppingCart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { BirdeyeChart } from "@/components/birdeye-chart";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 type TradeTab = "trades" | "orders" | "positions" | "history" | "holders" | "topTraders" | "devTokens";
+type MobileView = "chartTrade" | "trades" | "info";
 
 export default function TradePage() {
   const params = useParams();
@@ -53,12 +54,13 @@ export default function TradePage() {
   const [holdersLoading, setHoldersLoading] = useState(false);
   const [holdersCount, setHoldersCount] = useState(0);
   const [quoteInfo, setQuoteInfo] = useState<{ outAmount: string; priceImpact: string } | null>(null);
-    const [quoteLoading, setQuoteLoading] = useState(false);
-    const [quoteError, setQuoteError] = useState<string | null>(null);
-    const [tokenSocials, setTokenSocials] = useState<{ website?: string; twitter?: string; telegram?: string }>({});
-    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [tokenBanner, setTokenBanner] = useState<string | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [tokenSocials, setTokenSocials] = useState<{ website?: string; twitter?: string; telegram?: string }>({});
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [tokenBanner, setTokenBanner] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<MobileView>("chartTrade");
 
   const fetchToken = useCallback(async (isRefresh = false) => {
     if (!isRefresh && fetchedRef.current) return;
@@ -76,26 +78,26 @@ export default function TradePage() {
       const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`);
       const pairs = await res.json();
       
-        if (Array.isArray(pairs) && pairs.length > 0) {
-          const mainPair = pairs.sort((a: any, b: any) => 
-            (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-          )[0];
-          
-          if (mainPair.info?.socials) {
-            const socials: any = {};
-            mainPair.info.socials.forEach((s: any) => {
-              if (s.type === "twitter") socials.twitter = s.url;
-              if (s.type === "telegram") socials.telegram = s.url;
-            });
-            if (mainPair.info.websites?.[0]) socials.website = mainPair.info.websites[0].url;
-            setTokenSocials(socials);
-          }
+      if (Array.isArray(pairs) && pairs.length > 0) {
+        const mainPair = pairs.sort((a: any, b: any) => 
+          (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+        )[0];
+        
+        if (mainPair.info?.socials) {
+          const socials: any = {};
+          mainPair.info.socials.forEach((s: any) => {
+            if (s.type === "twitter") socials.twitter = s.url;
+            if (s.type === "telegram") socials.telegram = s.url;
+          });
+          if (mainPair.info.websites?.[0]) socials.website = mainPair.info.websites[0].url;
+          setTokenSocials(socials);
+        }
 
-          if (mainPair.info?.header) {
-            setTokenBanner(mainPair.info.header);
-          }
-          
-          setToken({
+        if (mainPair.info?.header) {
+          setTokenBanner(mainPair.info.header);
+        }
+        
+        setToken({
           address: mainPair.baseToken.address,
           symbol: mainPair.baseToken.symbol,
           name: mainPair.baseToken.name,
@@ -186,14 +188,14 @@ export default function TradePage() {
     fetchHolders();
   }, []);
   
-    useEffect(() => {
-      const interval = setInterval(() => {
-        fetchTrades();
-        fetchToken(true);
-      }, 5000);
-      
-      return () => clearInterval(interval);
-    }, [address, fetchTrades, fetchToken]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTrades();
+      fetchToken(true);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [address, fetchTrades, fetchToken]);
 
   useEffect(() => {
     if (token && holdersCount > 0 && !aiAnalysis && !aiLoading) {
@@ -354,32 +356,31 @@ export default function TradePage() {
           tx_hash: signature,
         });
 
-          addTrade({
-            id: signature,
-            tokenAddress: token.address,
-            tokenSymbol: token.symbol,
-            type: activeTab,
-            amountIn: displayAmount,
-            amountOut: parseFloat(quote.outAmount) / Math.pow(10, activeTab === "buy" ? (token.decimals || 9) : 9),
-            price: token.price,
-            timestamp: Date.now(),
-            signature,
-            status: "confirmed",
-          });
+        addTrade({
+          id: signature,
+          tokenAddress: token.address,
+          tokenSymbol: token.symbol,
+          type: activeTab,
+          amountIn: displayAmount,
+          amountOut: parseFloat(quote.outAmount) / Math.pow(10, activeTab === "buy" ? (token.decimals || 9) : 9),
+          price: token.price,
+          timestamp: Date.now(),
+          signature,
+          status: "confirmed",
+        });
 
-          fetch("/api/points/add", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              wallet: publicKey,
-              amount: activeTab === "buy" ? (displayAmount * (tokens.find(t => t.symbol === "SOL")?.price || 240)) : (displayAmount * token.price),
-              type: "trade",
-              description: `${activeTab === "buy" ? "Buy" : "Sell"} ${token.symbol}`
-            })
-          }).catch(console.error);
+        fetch("/api/points/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet: publicKey,
+            amount: activeTab === "buy" ? (displayAmount * (tokens.find(t => t.symbol === "SOL")?.price || 240)) : (displayAmount * token.price),
+            type: "trade",
+            description: `${activeTab === "buy" ? "Buy" : "Sell"} ${token.symbol}`
+          })
+        }).catch(console.error);
 
-          toast.success(
-
+        toast.success(
           <div className="flex flex-col gap-1">
             <span>{activeTab === "buy" ? "Bought" : "Sold"} {token.symbol}!</span>
             <a 
@@ -391,11 +392,11 @@ export default function TradePage() {
               View on Solscan
             </a>
           </div>
-          );
-          
-          refetchPosition();
-          fetchTrades();
-        }
+        );
+        
+        refetchPosition();
+        fetchTrades();
+      }
     } catch (error: any) {
       toast.dismiss();
       toast.error(error.message || "Trade failed");
@@ -434,6 +435,7 @@ export default function TradePage() {
 
   return (
     <div className="flex flex-col h-full bg-[#0b0e11] overflow-hidden">
+      {/* Header */}
       <div className="flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 border-b border-[#1e2329] bg-[#0d1117] overflow-x-auto no-scrollbar">
         <Link href="/" className="p-1 hover:bg-[#1e2329] rounded flex-shrink-0">
           <ArrowLeft className="w-4 h-4 text-gray-400" />
@@ -458,29 +460,29 @@ export default function TradePage() {
           <span className="text-[9px] sm:text-[10px] font-mono">{shortAddress}</span>
         </div>
 
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            {tokenSocials.twitter && (
-              <a href={tokenSocials.twitter} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#1DA1F2]" title="Twitter/X">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
-            )}
-            {tokenSocials.telegram && (
-              <a href={tokenSocials.telegram} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#0088cc]" title="Telegram">
-                <MessageCircle className="w-3.5 h-3.5" />
-              </a>
-            )}
-            {tokenSocials.website && (
-              <a href={tokenSocials.website} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white" title="Website">
-                <Globe className="w-3.5 h-3.5" />
-              </a>
-            )}
-            <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-yellow-500">
-              <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            </button>
-            <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
-              <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            </button>
-          </div>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {tokenSocials.twitter && (
+            <a href={tokenSocials.twitter} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#1DA1F2]" title="Twitter/X">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+          )}
+          {tokenSocials.telegram && (
+            <a href={tokenSocials.telegram} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-[#0088cc]" title="Telegram">
+              <MessageCircle className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {tokenSocials.website && (
+            <a href={tokenSocials.website} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white" title="Website">
+              <Globe className="w-3.5 h-3.5" />
+            </a>
+          )}
+          <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-yellow-500">
+            <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          </button>
+          <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
+            <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          </button>
+        </div>
 
         <div className="flex-1 min-w-0" />
 
@@ -510,45 +512,69 @@ export default function TradePage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
-          <div className="h-[50%] min-h-[300px]">
-            <BirdeyeChart 
-              symbol={token.symbol} 
-              tokenAddress={token.address}
-            />
+      {/* Mobile tabs */}
+      <div className="lg:hidden flex border-b border-[#1e2329] bg-[#0d1117]">
+        {[
+          { id: "chartTrade" as MobileView, icon: BarChart2, label: "Chart + Trade" },
+          { id: "trades" as MobileView, icon: ListOrdered, label: "Trades" },
+          { id: "info" as MobileView, icon: Shield, label: "Info" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setMobileView(tab.id)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors",
+              mobileView === tab.id
+                ? "text-[#02c076] border-b-2 border-[#02c076]"
+                : "text-gray-500"
+            )}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop Layout: Left 80% (Chart 55% + History 45%), Right 20% (Trade) */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        {/* Left Column - 80% */}
+        <div className="w-[80%] flex flex-col border-r border-[#1e2329]">
+          {/* Chart - 55% */}
+          <div className="h-[55%] border-b border-[#1e2329]">
+            <BirdeyeChart symbol={token.symbol} tokenAddress={token.address} />
           </div>
           
-          <div className="h-[50%] min-h-[200px] border-t border-[#1e2329] flex flex-col bg-[#0b0e11]">
-            <div className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 border-b border-[#1e2329] overflow-x-auto no-scrollbar flex-shrink-0">
-              {[
-                { id: "trades", label: "Trades" },
-                { id: "positions", label: "Positions" },
-                { id: "holders", label: `Holders` },
-                { id: "topTraders", label: "Top" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTradeTab(tab.id as TradeTab)}
-                  className={cn(
-                    "px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded whitespace-nowrap transition-all",
-                    activeTradeTab === tab.id
-                      ? "bg-[#1e2329] text-white"
-                      : "text-gray-500 hover:text-white"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-              <div className="flex-1" />
+          {/* Trades/History - 45% */}
+          <div className="h-[45%] flex flex-col bg-[#0d1117]">
+            <div className="flex items-center border-b border-[#1e2329] bg-[#0b0e11]">
+              <div className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto no-scrollbar flex-1">
+                {[
+                  { id: "trades", label: "Trades" },
+                  { id: "positions", label: "Positions" },
+                  { id: "holders", label: "Holders" },
+                  { id: "topTraders", label: "Top" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTradeTab(tab.id as TradeTab)}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-bold rounded whitespace-nowrap transition-all",
+                      activeTradeTab === tab.id
+                        ? "bg-[#1e2329] text-white"
+                        : "text-gray-500 hover:text-white"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <button 
                 onClick={() => { fetchTrades(); refetchPosition(); }}
-                className="p-1.5 sm:p-2 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white flex-shrink-0"
+                className="p-2 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white mr-2"
               >
-                <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", tradesLoading && "animate-spin")} />
+                <RefreshCw className={cn("w-4 h-4", tradesLoading && "animate-spin")} />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto">
               {activeTradeTab === "trades" && <TradesTable trades={trades} loading={tradesLoading} />}
               {activeTradeTab === "positions" && (
@@ -565,297 +591,447 @@ export default function TradePage() {
           </div>
         </div>
 
-        <div className="w-full lg:w-[320px] xl:w-[380px] flex-shrink-0 border-t lg:border-t-0 lg:border-l border-[#1e2329] bg-[#0b0e11] overflow-y-auto flex flex-col max-h-[50vh] lg:max-h-none">
-            {tokenBanner && (
-              <div className="relative w-full h-20 sm:h-24 overflow-hidden">
-                <img 
-                  src={tokenBanner} 
-                  alt={`${token.symbol} banner`}
-                  className="w-full h-full object-cover"
+        {/* Right Column - 20% Trade Panel */}
+        <div className="w-[20%] min-w-[280px] flex flex-col bg-[#0d1117] overflow-y-auto">
+          <TradePanelContent
+            token={token}
+            tokenBanner={tokenBanner}
+            isPositive={isPositive}
+            publicKey={publicKey}
+            balance={balance}
+            generateWallet={generateWallet}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            showSlippageInput={showSlippageInput}
+            setShowSlippageInput={setShowSlippageInput}
+            slippage={slippage}
+            setSlippage={setSlippage}
+            buyAmount={buyAmount}
+            setBuyAmount={setBuyAmount}
+            sellMode={sellMode}
+            setSellMode={setSellMode}
+            sellPercent={sellPercent}
+            setSellPercent={setSellPercent}
+            customSellAmount={customSellAmount}
+            setCustomSellAmount={setCustomSellAmount}
+            position={position}
+            quoteInfo={quoteInfo}
+            quoteLoading={quoteLoading}
+            isTrading={isTrading}
+            isSwapping={isSwapping}
+            handleTrade={handleTrade}
+            top10Percent={top10Percent}
+            holdersCount={holdersCount}
+            aiAnalysis={aiAnalysis}
+            aiLoading={aiLoading}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
+        {mobileView === "chartTrade" && (
+          <>
+            <div className="h-[45%] min-h-[200px]">
+              <BirdeyeChart symbol={token.symbol} tokenAddress={token.address} />
+            </div>
+            <div className="flex-1 overflow-y-auto border-t border-[#1e2329]">
+              <TradePanelContent
+                token={token}
+                tokenBanner={null}
+                isPositive={isPositive}
+                publicKey={publicKey}
+                balance={balance}
+                generateWallet={generateWallet}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                showSlippageInput={showSlippageInput}
+                setShowSlippageInput={setShowSlippageInput}
+                slippage={slippage}
+                setSlippage={setSlippage}
+                buyAmount={buyAmount}
+                setBuyAmount={setBuyAmount}
+                sellMode={sellMode}
+                setSellMode={setSellMode}
+                sellPercent={sellPercent}
+                setSellPercent={setSellPercent}
+                customSellAmount={customSellAmount}
+                setCustomSellAmount={setCustomSellAmount}
+                position={position}
+                quoteInfo={quoteInfo}
+                quoteLoading={quoteLoading}
+                isTrading={isTrading}
+                isSwapping={isSwapping}
+                handleTrade={handleTrade}
+                top10Percent={top10Percent}
+                holdersCount={holdersCount}
+                aiAnalysis={aiAnalysis}
+                aiLoading={aiLoading}
+                isMobile
+              />
+            </div>
+          </>
+        )}
+
+        {mobileView === "trades" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1e2329] overflow-x-auto no-scrollbar">
+              {[
+                { id: "trades", label: "Trades" },
+                { id: "positions", label: "Positions" },
+                { id: "holders", label: "Holders" },
+                { id: "topTraders", label: "Top" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTradeTab(tab.id as TradeTab)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded whitespace-nowrap transition-all",
+                    activeTradeTab === tab.id
+                      ? "bg-[#1e2329] text-white"
+                      : "text-gray-500 hover:text-white"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <div className="flex-1" />
+              <button 
+                onClick={() => { fetchTrades(); refetchPosition(); }}
+                className="p-1.5 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white"
+              >
+                <RefreshCw className={cn("w-4 h-4", tradesLoading && "animate-spin")} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {activeTradeTab === "trades" && <TradesTable trades={trades} loading={tradesLoading} />}
+              {activeTradeTab === "positions" && (
+                <PositionDisplay 
+                  position={position} 
+                  loading={positionLoading} 
+                  token={token}
+                  publicKey={publicKey}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e11] to-transparent" />
-              </div>
-            )}
-            
-            <div className={cn(
-              "flex items-center gap-3 px-3 py-2 border-b border-[#1e2329]",
-              tokenBanner && "-mt-8 relative z-10"
-            )}>
-              {token.logoURI ? (
-                <img 
-                  src={token.logoURI} 
-                  alt={token.symbol} 
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#1e2329] bg-[#0b0e11]" 
-                />
-              ) : (
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#02c076] flex items-center justify-center text-sm font-bold text-black border-2 border-[#1e2329]">
-                  {token.symbol.slice(0, 2)}
+              )}
+              {activeTradeTab === "holders" && <HoldersTable holders={holders} loading={holdersLoading} />}
+              {activeTradeTab === "topTraders" && <HoldersTable holders={holders.slice(0, 10)} loading={holdersLoading} />}
+            </div>
+          </div>
+        )}
+
+        {mobileView === "info" && (
+          <MobileInfoView
+            token={token}
+            isPositive={isPositive}
+            holdersCount={holdersCount}
+            copyAddress={copyAddress}
+            aiAnalysis={aiAnalysis}
+            aiLoading={aiLoading}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TradePanelContent({
+  token,
+  tokenBanner,
+  isPositive,
+  publicKey,
+  balance,
+  generateWallet,
+  activeTab,
+  setActiveTab,
+  showSlippageInput,
+  setShowSlippageInput,
+  slippage,
+  setSlippage,
+  buyAmount,
+  setBuyAmount,
+  sellMode,
+  setSellMode,
+  sellPercent,
+  setSellPercent,
+  customSellAmount,
+  setCustomSellAmount,
+  position,
+  quoteInfo,
+  quoteLoading,
+  isTrading,
+  isSwapping,
+  handleTrade,
+  top10Percent,
+  holdersCount,
+  aiAnalysis,
+  aiLoading,
+  isMobile = false,
+}: any) {
+  return (
+    <div className="flex flex-col h-full">
+      {tokenBanner && !isMobile && (
+        <div className="relative w-full h-20 overflow-hidden">
+          <img src={tokenBanner} alt={`${token.symbol} banner`} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e11] to-transparent" />
+        </div>
+      )}
+      
+      {!isMobile && (
+        <div className={cn("flex items-center gap-3 px-3 py-2 border-b border-[#1e2329]", tokenBanner && "-mt-8 relative z-10")}>
+          {token.logoURI ? (
+            <img src={token.logoURI} alt={token.symbol} className="w-10 h-10 rounded-full border-2 border-[#1e2329] bg-[#0b0e11]" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-[#02c076] flex items-center justify-center text-sm font-bold text-black border-2 border-[#1e2329]">
+              {token.symbol.slice(0, 2)}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-white text-sm truncate">{token.symbol}</p>
+            <p className="text-[10px] text-gray-500 truncate">{token.name}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-bold text-white text-sm">${formatPrice(token.price)}</p>
+            <p className={cn("text-[10px] font-bold", isPositive ? "text-[#02c076]" : "text-[#f6465d]")}>
+              {isPositive ? "+" : ""}{token.priceChange24h.toFixed(2)}%
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isMobile && (
+        <div className="grid grid-cols-5 gap-px border-b border-[#1e2329] bg-[#1e2329]">
+          {[
+            { label: "1m", change: token.priceChange24h * 0.08 },
+            { label: "5m", change: token.priceChange24h * 0.15 },
+            { label: "1h", change: token.priceChange24h * 0.4 },
+            { label: "24h", change: token.priceChange24h },
+          ].map((item) => (
+            <div key={item.label} className="text-center py-1 bg-[#0b0e11]">
+              <p className="text-[8px] text-gray-500">{item.label}</p>
+              <p className={cn("text-[9px] font-bold", item.change >= 0 ? "text-[#02c076]" : "text-[#f6465d]")}>
+                {item.change >= 0 ? "+" : ""}{item.change.toFixed(1)}%
+              </p>
+            </div>
+          ))}
+          <div className="text-center py-1 bg-[#0b0e11]">
+            <p className="text-[8px] text-gray-500">Vol</p>
+            <p className="text-[9px] text-white font-bold">${formatNumber(token.volume24h)}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex p-1.5 border-b border-[#1e2329]">
+        <button
+          onClick={() => setActiveTab("buy")}
+          className={cn(
+            "flex-1 py-2 text-sm font-bold rounded-l transition-all",
+            activeTab === "buy" ? "bg-[#02c076] text-black" : "bg-[#1e2329] text-gray-400"
+          )}
+        >
+          Buy
+        </button>
+        <button
+          onClick={() => setActiveTab("sell")}
+          className={cn(
+            "flex-1 py-2 text-sm font-bold rounded-r transition-all",
+            activeTab === "sell" ? "bg-[#f6465d] text-white" : "bg-[#1e2329] text-gray-400"
+          )}
+        >
+          Sell
+        </button>
+        <button 
+          onClick={() => setShowSlippageInput(!showSlippageInput)}
+          className={cn(
+            "ml-1 px-2 py-2 text-[10px] font-bold rounded flex items-center gap-1",
+            showSlippageInput ? "bg-[#02c076] text-black" : "bg-[#1e2329] text-gray-400"
+          )}
+        >
+          <Settings className="w-3 h-3" />
+          {slippage}%
+        </button>
+      </div>
+
+      {showSlippageInput && (
+        <div className="px-2 py-2 border-b border-[#1e2329] bg-[#0d1117]">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500">Slippage:</span>
+            <div className="flex gap-1 flex-1">
+              {[0.5, 1, 2, 5].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSlippage(s)}
+                  className={cn(
+                    "flex-1 py-1 text-[10px] font-bold rounded",
+                    slippage === s ? "bg-[#02c076] text-black" : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                  )}
+                >
+                  {s}%
+                </button>
+              ))}
+            </div>
+            <Input
+              type="number"
+              value={slippage}
+              onChange={(e) => setSlippage(Math.min(50, Math.max(0.1, parseFloat(e.target.value) || 1)))}
+              className="w-16 h-7 text-[10px] bg-[#1e2329] border-[#2b3139] text-center"
+              step="0.1"
+              min="0.1"
+              max="50"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="p-2 space-y-2 flex-1">
+        {!publicKey ? (
+          <div className="flex flex-col items-center gap-2 py-4">
+            <Wallet className="w-8 h-8 text-gray-600" />
+            <p className="text-xs text-gray-500 text-center">Connect wallet to trade</p>
+            <Button onClick={generateWallet} className="bg-[#02c076] hover:bg-[#02a566] text-black font-bold text-xs">
+              Generate Wallet
+            </Button>
+            <Link href="/wallet" className="text-[#02c076] text-[10px] hover:underline">
+              Or import existing wallet
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-[10px] text-gray-500 px-1">
+              <span>Bal: {balance.toFixed(4)} SOL</span>
+            </div>
+
+            {activeTab === "buy" ? (
+              <div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={buyAmount}
+                    onChange={(e) => setBuyAmount(e.target.value)}
+                    placeholder="0.0"
+                    className="bg-[#1e2329] border-[#2b3139] h-9 font-mono text-sm pr-12"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">SOL</span>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-white text-sm sm:text-base truncate">{token.symbol}</p>
-                <p className="text-[10px] sm:text-xs text-gray-500 truncate">{token.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-white text-sm">${formatPrice(token.price)}</p>
-                <p className={cn(
-                  "text-[10px] font-bold",
-                  isPositive ? "text-[#02c076]" : "text-[#f6465d]"
-                )}>
-                  {isPositive ? "+" : ""}{token.priceChange24h.toFixed(2)}%
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-5 gap-px border-b border-[#1e2329] bg-[#1e2329]">
-            {[
-              { label: "1m", change: token.priceChange24h * 0.08 },
-              { label: "5m", change: token.priceChange24h * 0.15 },
-              { label: "1h", change: token.priceChange24h * 0.4 },
-              { label: "24h", change: token.priceChange24h },
-            ].map((item) => (
-              <div key={item.label} className="text-center py-1 sm:py-1.5 bg-[#0b0e11]">
-                <p className="text-[8px] sm:text-[9px] text-gray-500">{item.label}</p>
-                <p className={cn(
-                  "text-[9px] sm:text-[10px] font-bold",
-                  item.change >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
-                )}>{item.change >= 0 ? "+" : ""}{item.change.toFixed(1)}%</p>
-              </div>
-            ))}
-            <div className="text-center py-1 sm:py-1.5 bg-[#0b0e11]">
-              <p className="text-[8px] sm:text-[9px] text-gray-500">Vol</p>
-              <p className="text-[9px] sm:text-[10px] text-white font-bold">${formatNumber(token.volume24h)}</p>
-            </div>
-          </div>
-
-          <div className="flex p-1.5 border-b border-[#1e2329]">
-            <button
-              onClick={() => setActiveTab("buy")}
-              className={cn(
-                "flex-1 py-2 text-sm font-bold rounded-l transition-all",
-                activeTab === "buy" ? "bg-[#02c076] text-black" : "bg-[#1e2329] text-gray-400"
-              )}
-            >
-              Buy
-            </button>
-            <button
-              onClick={() => setActiveTab("sell")}
-              className={cn(
-                "flex-1 py-2 text-sm font-bold rounded-r transition-all",
-                activeTab === "sell" ? "bg-[#f6465d] text-white" : "bg-[#1e2329] text-gray-400"
-              )}
-            >
-              Sell
-            </button>
-            <button 
-              onClick={() => setShowSlippageInput(!showSlippageInput)}
-              className={cn(
-                "ml-1 px-2 py-2 text-[10px] font-bold rounded flex items-center gap-1",
-                showSlippageInput ? "bg-[#02c076] text-black" : "bg-[#1e2329] text-gray-400"
-              )}
-              title="Slippage settings"
-            >
-              <Settings className="w-3 h-3" />
-              {slippage}%
-            </button>
-          </div>
-
-          {showSlippageInput && (
-            <div className="px-2 py-2 border-b border-[#1e2329] bg-[#0d1117]">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-500">Slippage:</span>
-                <div className="flex gap-1 flex-1">
-                  {[0.5, 1, 2, 5].map((s) => (
+                <div className="flex gap-1 mt-1.5">
+                  {[0.01, 0.1, 0.5, 1].map((amt) => (
                     <button
-                      key={s}
-                      onClick={() => setSlippage(s)}
+                      key={amt}
+                      onClick={() => setBuyAmount(amt.toString())}
                       className={cn(
-                        "flex-1 py-1 text-[10px] font-bold rounded",
-                        slippage === s 
-                          ? "bg-[#02c076] text-black" 
-                          : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                        "flex-1 py-1.5 text-[10px] font-bold rounded",
+                        buyAmount === amt.toString() ? "bg-[#02c076] text-black" : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
                       )}
                     >
-                      {s}%
+                      {amt}
                     </button>
                   ))}
                 </div>
-                <Input
-                  type="number"
-                  value={slippage}
-                  onChange={(e) => setSlippage(Math.min(50, Math.max(0.1, parseFloat(e.target.value) || 1)))}
-                  className="w-16 h-7 text-[10px] bg-[#1e2329] border-[#2b3139] text-center"
-                  step="0.1"
-                  min="0.1"
-                  max="50"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="p-2 space-y-2 flex-1">
-            {!publicKey ? (
-              <div className="flex flex-col items-center gap-2 py-4 sm:py-6">
-                <Wallet className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600" />
-                <p className="text-xs sm:text-sm text-gray-500 text-center">Connect wallet to trade</p>
-                <Button 
-                  onClick={generateWallet}
-                  className="bg-[#02c076] hover:bg-[#02a566] text-black font-bold text-xs sm:text-sm"
-                >
-                  Generate Wallet
-                </Button>
-                <Link href="/wallet" className="text-[#02c076] text-[10px] sm:text-xs hover:underline">
-                  Or import existing wallet
-                </Link>
               </div>
             ) : (
-              <>
-                <div className="flex items-center justify-between text-[10px] text-gray-500 px-1">
-                  <span>Bal: {balance.toFixed(4)} SOL</span>
+              <div>
+                <div className="flex gap-1 mb-1.5">
+                  <button
+                    onClick={() => setSellMode("percent")}
+                    className={cn(
+                      "flex-1 py-1 text-[10px] font-bold rounded",
+                      sellMode === "percent" ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                    )}
+                  >
+                    %
+                  </button>
+                  <button
+                    onClick={() => setSellMode("custom")}
+                    className={cn(
+                      "flex-1 py-1 text-[10px] font-bold rounded",
+                      sellMode === "custom" ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                    )}
+                  >
+                    Custom
+                  </button>
                 </div>
-
-                {activeTab === "buy" ? (
-                  <div>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        value={buyAmount}
-                        onChange={(e) => setBuyAmount(e.target.value)}
-                        placeholder="0.0"
-                        className="bg-[#1e2329] border-[#2b3139] h-9 font-mono text-sm pr-12"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">SOL</span>
-                    </div>
-                    <div className="flex gap-1 mt-1.5">
-                      {[0.01, 0.1, 0.5, 1].map((amt) => (
-                        <button
-                          key={amt}
-                          onClick={() => setBuyAmount(amt.toString())}
-                          className={cn(
-                            "flex-1 py-1.5 text-[10px] font-bold rounded",
-                            buyAmount === amt.toString() 
-                              ? "bg-[#02c076] text-black" 
-                              : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
-                          )}
-                        >
-                          {amt}
-                        </button>
-                      ))}
-                    </div>
+                
+                {sellMode === "percent" ? (
+                  <div className="flex gap-1">
+                    {[25, 50, 75, 100].map((pct) => (
+                      <button
+                        key={pct}
+                        onClick={() => setSellPercent(pct)}
+                        className={cn(
+                          "flex-1 py-2 text-[10px] font-bold rounded",
+                          sellPercent === pct ? "bg-[#f6465d] text-white" : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
+                        )}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
                   </div>
                 ) : (
-                  <div>
-                    <div className="flex gap-1 mb-1.5">
-                      <button
-                        onClick={() => setSellMode("percent")}
-                        className={cn(
-                          "flex-1 py-1 text-[10px] font-bold rounded",
-                          sellMode === "percent" 
-                            ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" 
-                            : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
-                        )}
-                      >
-                        %
-                      </button>
-                      <button
-                        onClick={() => setSellMode("custom")}
-                        className={cn(
-                          "flex-1 py-1 text-[10px] font-bold rounded",
-                          sellMode === "custom" 
-                            ? "bg-[#f6465d]/20 text-[#f6465d] border border-[#f6465d]" 
-                            : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
-                        )}
-                      >
-                        Custom
-                      </button>
-                    </div>
-                    
-                    {sellMode === "percent" ? (
-                      <div className="flex gap-1">
-                        {[25, 50, 75, 100].map((pct) => (
-                          <button
-                            key={pct}
-                            onClick={() => setSellPercent(pct)}
-                            className={cn(
-                              "flex-1 py-2 text-[10px] font-bold rounded",
-                              sellPercent === pct 
-                                ? "bg-[#f6465d] text-white" 
-                                : "bg-[#1e2329] hover:bg-[#2b3139] text-gray-400"
-                            )}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={customSellAmount}
-                          onChange={(e) => setCustomSellAmount(e.target.value)}
-                          placeholder={position ? `Max: ${position.uiBalance.toFixed(4)}` : "0.0"}
-                          className="bg-[#1e2329] border-[#2b3139] h-9 font-mono text-sm pr-16"
-                        />
-                        <button
-                          onClick={() => position && setCustomSellAmount(position.uiBalance.toString())}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#f6465d] font-bold hover:underline"
-                        >
-                          MAX
-                        </button>
-                      </div>
-                    )}
-                    
-                    {position && position.uiBalance > 0 && (
-                      <p className="text-[10px] text-gray-500 mt-1.5 px-1">
-                        Selling: {sellMode === "custom" && customSellAmount 
-                          ? Math.min(parseFloat(customSellAmount) || 0, position.uiBalance).toFixed(4) 
-                          : ((position.uiBalance * sellPercent) / 100).toFixed(4)} {token.symbol}
-                      </p>
-                    )}
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={customSellAmount}
+                      onChange={(e) => setCustomSellAmount(e.target.value)}
+                      placeholder={position ? `Max: ${position.uiBalance.toFixed(4)}` : "0.0"}
+                      className="bg-[#1e2329] border-[#2b3139] h-9 font-mono text-sm pr-16"
+                    />
+                    <button
+                      onClick={() => position && setCustomSellAmount(position.uiBalance.toString())}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#f6465d] font-bold hover:underline"
+                    >
+                      MAX
+                    </button>
                   </div>
                 )}
-
-                {quoteInfo && !quoteLoading && (
-                  <div className="bg-[#1e2329] rounded p-2 text-[10px]">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Est. receive</span>
-                      <span className="text-white font-mono">
-                        ~{quoteInfo.outAmount} {activeTab === "buy" ? token.symbol : "SOL"}
-                      </span>
-                    </div>
-                  </div>
+                
+                {position && position.uiBalance > 0 && (
+                  <p className="text-[10px] text-gray-500 mt-1.5 px-1">
+                    Selling: {sellMode === "custom" && customSellAmount 
+                      ? Math.min(parseFloat(customSellAmount) || 0, position.uiBalance).toFixed(4) 
+                      : ((position.uiBalance * sellPercent) / 100).toFixed(4)} {token.symbol}
+                  </p>
                 )}
+              </div>
+            )}
 
-                <Button
-                  onClick={handleTrade}
-                  disabled={
-                    isTrading || 
-                    isSwapping || 
-                    (activeTab === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0)) ||
-                    (activeTab === "sell" && (!position || position.uiBalance <= 0 || (sellMode === "custom" && (!customSellAmount || parseFloat(customSellAmount) <= 0))))
-                  }
-                  className={cn(
-                    "w-full h-10 font-bold text-sm",
-                    activeTab === "buy" 
-                      ? "bg-[#02c076] hover:bg-[#02a566] text-black" 
-                      : "bg-[#f6465d] hover:bg-[#d9304a] text-white"
-                  )}
-                >
-                  {isTrading || isSwapping ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : activeTab === "buy" ? (
-                    `Buy ${buyAmount} SOL`
-                  ) : sellMode === "custom" && customSellAmount ? (
-                    `Sell ${parseFloat(customSellAmount).toFixed(4)} ${token.symbol}`
-                  ) : (
-                    `Sell ${sellPercent}%`
-                  )}
-                </Button>
+            {quoteInfo && !quoteLoading && (
+              <div className="bg-[#1e2329] rounded p-2 text-[10px]">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Est. receive</span>
+                  <span className="text-white font-mono">~{quoteInfo.outAmount} {activeTab === "buy" ? token.symbol : "SOL"}</span>
+                </div>
+              </div>
+            )}
 
-                <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
+            <Button
+              onClick={handleTrade}
+              disabled={
+                isTrading || 
+                isSwapping || 
+                (activeTab === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0)) ||
+                (activeTab === "sell" && (!position || position.uiBalance <= 0 || (sellMode === "custom" && (!customSellAmount || parseFloat(customSellAmount) <= 0))))
+              }
+              className={cn(
+                "w-full h-10 font-bold text-sm",
+                activeTab === "buy" ? "bg-[#02c076] hover:bg-[#02a566] text-black" : "bg-[#f6465d] hover:bg-[#d9304a] text-white"
+              )}
+            >
+              {isTrading || isSwapping ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : activeTab === "buy" ? (
+                `Buy ${buyAmount} SOL`
+              ) : sellMode === "custom" && customSellAmount ? (
+                `Sell ${parseFloat(customSellAmount).toFixed(4)} ${token.symbol}`
+              ) : (
+                `Sell ${sellPercent}%`
+              )}
+            </Button>
+
+            {!isMobile && (
+              <>
+                <div className="grid grid-cols-4 gap-1 pt-1">
                   {["Top 10", "DEV", "Holders", "Snipers"].map((label, i) => (
                     <div key={label} className="text-center">
                       <p className="text-[9px] text-gray-500">{label}</p>
@@ -869,7 +1045,7 @@ export default function TradePage() {
                   ))}
                 </div>
 
-                <div className="hidden lg:grid grid-cols-4 gap-1 pt-1">
+                <div className="grid grid-cols-4 gap-1 pt-1">
                   {["Insiders", "Phishing", "Bundler", "Dex Paid"].map((label, i) => (
                     <div key={label} className="text-center">
                       <p className="text-[9px] text-gray-500">{label}</p>
@@ -883,50 +1059,163 @@ export default function TradePage() {
                   ))}
                 </div>
 
-                <div className="hidden lg:flex gap-1 pt-1">
+                <div className="flex gap-1 pt-1">
                   <SecurityBadge label="NoMint" safe={!token.security?.isMintable} />
                   <SecurityBadge label="NoBlacklist" safe={true} />
                   <SecurityBadge label="Burnt" safe={true} />
                 </div>
               </>
             )}
+          </>
+        )}
 
-              <div className="grid grid-cols-2 gap-1.5 pt-2">
-                <a
-                  href={`https://dexscreener.com/solana/${token.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
-                >
-                  <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  DexScreener
-                </a>
-                <a
-                  href={`https://solscan.io/token/${token.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
-                >
-                  <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  Solscan
-                </a>
-              </div>
+        <div className="grid grid-cols-2 gap-1.5 pt-2">
+          <a
+            href={`https://dexscreener.com/solana/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            DexScreener
+          </a>
+          <a
+            href={`https://solscan.io/token/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded text-gray-400 hover:text-white"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Solscan
+          </a>
+        </div>
 
-              <div className="hidden sm:block mt-auto pt-2 sm:pt-3 border-t border-[#1e2329]">
-                <div className="flex items-center gap-2 mb-1 sm:mb-2">
-                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
-                  <span className="text-xs sm:text-sm font-bold text-white">DYOR</span>
-                  {aiLoading && <Loader2 className="w-3 h-3 animate-spin text-[#02c076]" />}
-                </div>
-                {aiAnalysis ? (
-                  <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed line-clamp-3">{aiAnalysis}</p>
-                ) : aiLoading ? (
-                  <p className="text-[10px] sm:text-xs text-gray-500">Analyzing...</p>
-                ) : (
-                  <p className="text-[10px] sm:text-xs text-gray-500">AI analysis loading...</p>
-                )}
-              </div>
+        {!isMobile && (
+          <div className="mt-auto pt-2 border-t border-[#1e2329]">
+            <div className="flex items-center gap-2 mb-1">
+              <Shield className="w-3.5 h-3.5 text-yellow-500" />
+              <span className="text-xs font-bold text-white">DYOR</span>
+              {aiLoading && <Loader2 className="w-3 h-3 animate-spin text-[#02c076]" />}
+            </div>
+            {aiAnalysis ? (
+              <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-3">{aiAnalysis}</p>
+            ) : aiLoading ? (
+              <p className="text-[10px] text-gray-500">Analyzing...</p>
+            ) : (
+              <p className="text-[10px] text-gray-500">AI analysis loading...</p>
+            )}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MobileInfoView({ token, isPositive, holdersCount, copyAddress, aiAnalysis, aiLoading }: any) {
+  return (
+    <div className="flex-1 overflow-y-auto bg-[#0b0e11] p-4">
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          {token.logoURI ? (
+            <img src={token.logoURI} alt={token.symbol} className="w-12 h-12 rounded-full" />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-[#02c076] flex items-center justify-center text-sm font-bold text-black">
+              {token.symbol.slice(0, 2)}
+            </div>
+          )}
+          <div>
+            <p className="font-bold text-white text-lg">{token.symbol}</p>
+            <p className="text-xs text-gray-500">{token.name}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">Price</p>
+            <p className="text-sm font-bold text-white">${formatPrice(token.price)}</p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">24h Change</p>
+            <p className={cn("text-sm font-bold", isPositive ? "text-[#02c076]" : "text-[#f6465d]")}>
+              {isPositive ? "+" : ""}{token.priceChange24h.toFixed(2)}%
+            </p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">Market Cap</p>
+            <p className="text-sm font-bold text-white">${formatNumber(token.marketCap)}</p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">Liquidity</p>
+            <p className="text-sm font-bold text-white">${formatNumber(token.liquidity)}</p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">24h Volume</p>
+            <p className="text-sm font-bold text-white">${formatNumber(token.volume24h)}</p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-3">
+            <p className="text-[10px] text-gray-500 uppercase">Holders</p>
+            <p className="text-sm font-bold text-white">{holdersCount || "—"}</p>
+          </div>
+        </div>
+
+        <div className="bg-[#1e2329] rounded-lg p-3">
+          <p className="text-[10px] text-gray-500 uppercase mb-2">Contract Address</p>
+          <div className="flex items-center gap-2">
+            <code className="text-xs text-gray-400 flex-1 truncate">{token.address}</code>
+            <button onClick={copyAddress} className="p-1.5 hover:bg-[#2b3139] rounded">
+              <Copy className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-[#1e2329] rounded-lg p-3">
+          <p className="text-[10px] text-gray-500 uppercase mb-2">Security</p>
+          <div className="flex gap-2">
+            <SecurityBadge label="NoMint" safe={!token.security?.isMintable} />
+            <SecurityBadge label="NoBlacklist" safe={true} />
+            <SecurityBadge label="Burnt" safe={true} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={`https://dexscreener.com/solana/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded-lg text-gray-400 hover:text-white"
+          >
+            <ExternalLink className="w-4 h-4" />
+            DexScreener
+          </a>
+          <a
+            href={`https://solscan.io/token/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 text-xs font-bold bg-[#1e2329] hover:bg-[#2b3139] rounded-lg text-gray-400 hover:text-white"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Solscan
+          </a>
+        </div>
+
+        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-5 h-5 text-yellow-500" />
+            <span className="text-sm font-bold text-white">DYOR - Do Your Own Research</span>
+          </div>
+          {aiAnalysis ? (
+            <p className="text-xs text-gray-300 leading-relaxed">{aiAnalysis}</p>
+          ) : aiLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-yellow-500" />
+              <p className="text-xs text-gray-400">Analyzing token...</p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">
+              Always verify token contracts, check liquidity locks, and research the team before investing. 
+              Memecoins are extremely volatile and you can lose your entire investment.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -945,17 +1234,7 @@ function SecurityBadge({ label, safe }: { label: string; safe: boolean }) {
   );
 }
 
-function PositionDisplay({ 
-  position, 
-  loading, 
-  token,
-  publicKey 
-}: { 
-  position: any; 
-  loading: boolean; 
-  token: Token;
-  publicKey: string | null;
-}) {
+function PositionDisplay({ position, loading, token, publicKey }: { position: any; loading: boolean; token: Token; publicKey: string | null }) {
   const [myTrades, setMyTrades] = useState<any[]>([]);
   const [tradesLoading, setTradesLoading] = useState(false);
   const fetchedRef = useRef(false);

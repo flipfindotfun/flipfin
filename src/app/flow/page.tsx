@@ -399,7 +399,7 @@ export default function FlowPage() {
               )}
 
               <TwitterFeed
-                query="solana memecoin pump crypto alpha -is:retweet lang:en"
+                query="solana memecoin crypto alpha"
                 limit={6}
                 title="Crypto Twitter"
               />

@@ -107,14 +107,16 @@ export default function SocialProofPage() {
     return "Fake Hype";
   };
 
+  const [showRightPanel, setShowRightPanel] = useState(false);
+
   return (
     <div className="flex flex-col h-screen bg-[#0b0e11] overflow-hidden">
       <Header />
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h1 className="text-xl font-bold text-white flex items-center gap-2">
@@ -354,7 +356,7 @@ export default function SocialProofPage() {
               )}
             </div>
 
-              <div className="lg:w-80 space-y-4">
+              <div className="lg:w-80 space-y-4 hidden lg:block">
                 <MarketStatsWidget />
                 
                 {selectedToken && (
