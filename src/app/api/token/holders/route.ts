@@ -6,10 +6,18 @@ export const dynamic = "force-dynamic";
 const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
 const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
 
+interface TokenAccount {
+  address: string;
+  owner: string;
+  amount: number;
+  delegated_amount: number;
+  frozen: boolean;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
-  const limit = parseInt(searchParams.get("limit") || "30");
+  const limit = parseInt(searchParams.get("limit") || "50");
 
   if (!address) {
     return NextResponse.json({ error: "Token address is required" }, { status: 400 });
@@ -38,62 +46,141 @@ export async function GET(request: Request) {
 
   if (HELIUS_API_KEY) {
     try {
-      const response = await axios.post(
-        `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
-        {
-          jsonrpc: "2.0",
-          id: "holders",
-          method: "getTokenLargestAccounts",
-          params: [address],
-        },
-        { timeout: 15000 }
-      );
-
-      const accounts = response.data?.result?.value || [];
+      const allAccounts: TokenAccount[] = [];
+      let page = 1;
+      const maxPages = 10;
       
-      const totalSupply = accounts.reduce((sum: number, acc: any) => 
-        sum + (parseFloat(acc.uiAmount) || 0), 0
-      );
-
-      const ownerPromises = accounts.slice(0, Math.min(limit, 20)).map(async (acc: any) => {
-        try {
-          const ownerRes = await axios.post(
-            `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
-            {
-              jsonrpc: "2.0",
-              id: "owner",
-              method: "getAccountInfo",
-              params: [acc.address, { encoding: "jsonParsed" }],
+      while (page <= maxPages) {
+        const response = await axios.post(
+          `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
+          {
+            jsonrpc: "2.0",
+            id: "helius-holders",
+            method: "getTokenAccounts",
+            params: {
+              page: page,
+              limit: 1000,
+              displayOptions: {},
+              mint: address,
             },
-            { timeout: 5000 }
-          );
-          return ownerRes.data?.result?.value?.data?.parsed?.info?.owner || acc.address;
-        } catch {
-          return acc.address;
+          },
+          { timeout: 15000 }
+        );
+
+        const accounts = response.data?.result?.token_accounts || [];
+        
+        if (accounts.length === 0) {
+          break;
         }
-      });
+        
+        allAccounts.push(...accounts);
+        page++;
+        
+        if (accounts.length < 1000) {
+          break;
+        }
+      }
 
-      const owners = await Promise.all(ownerPromises);
+      if (allAccounts.length === 0) {
+        const fallbackResponse = await axios.post(
+          `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
+          {
+            jsonrpc: "2.0",
+            id: "holders",
+            method: "getTokenLargestAccounts",
+            params: [address],
+          },
+          { timeout: 15000 }
+        );
 
-      const mappedHolders = accounts.slice(0, Math.min(limit, 20)).map((acc: any, i: number) => {
-        const amount = parseFloat(acc.uiAmount) || 0;
-        const percentage = totalSupply > 0 ? (amount / totalSupply) * 100 : 0;
+        const accounts = fallbackResponse.data?.result?.value || [];
+        
+        const totalSupply = accounts.reduce((sum: number, acc: any) => 
+          sum + (parseFloat(acc.uiAmount) || 0), 0
+        );
+
+        const ownerPromises = accounts.slice(0, Math.min(limit, 20)).map(async (acc: any) => {
+          try {
+            const ownerRes = await axios.post(
+              `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
+              {
+                jsonrpc: "2.0",
+                id: "owner",
+                method: "getAccountInfo",
+                params: [acc.address, { encoding: "jsonParsed" }],
+              },
+              { timeout: 5000 }
+            );
+            return ownerRes.data?.result?.value?.data?.parsed?.info?.owner || acc.address;
+          } catch {
+            return acc.address;
+          }
+        });
+
+        const owners = await Promise.all(ownerPromises);
+
+        const mappedHolders = accounts.slice(0, Math.min(limit, 20)).map((acc: any, i: number) => {
+          const amount = parseFloat(acc.uiAmount) || 0;
+          const percentage = totalSupply > 0 ? (amount / totalSupply) * 100 : 0;
+          
+          return {
+            rank: i + 1,
+            address: owners[i],
+            addressShort: shortenAddress(owners[i]),
+            balance: amount,
+            percentage: percentage,
+            value: 0,
+            txCount: 0,
+          };
+        });
+
+        return NextResponse.json({ 
+          holders: mappedHolders,
+          source: "helius-fallback",
+          total: totalHolders || accounts.length
+        });
+      }
+
+      const totalSupply = allAccounts.reduce((sum, acc) => sum + (acc.amount || 0), 0);
+
+      const sortedAccounts = allAccounts
+        .filter(acc => acc.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+
+      const mappedHolders = sortedAccounts.slice(0, limit).map((acc, i) => {
+        const percentage = totalSupply > 0 ? (acc.amount / totalSupply) * 100 : 0;
         
         return {
           rank: i + 1,
-          address: owners[i],
-          addressShort: shortenAddress(owners[i]),
-          balance: amount,
+          address: acc.owner,
+          addressShort: shortenAddress(acc.owner),
+          balance: acc.amount,
           percentage: percentage,
           value: 0,
           txCount: 0,
         };
       });
 
+      const top10Percent = sortedAccounts.slice(0, 10).reduce((sum, acc) => 
+        sum + (totalSupply > 0 ? (acc.amount / totalSupply) * 100 : 0), 0
+      );
+      const top100Percent = sortedAccounts.slice(0, 100).reduce((sum, acc) => 
+        sum + (totalSupply > 0 ? (acc.amount / totalSupply) * 100 : 0), 0
+      );
+      const top500Percent = sortedAccounts.slice(0, 500).reduce((sum, acc) => 
+        sum + (totalSupply > 0 ? (acc.amount / totalSupply) * 100 : 0), 0
+      );
+
       return NextResponse.json({ 
         holders: mappedHolders,
         source: "helius",
-        total: totalHolders || accounts.length
+        total: totalHolders || sortedAccounts.length,
+        distribution: {
+          top10: top10Percent,
+          top100: top100Percent,
+          top500: top500Percent,
+          totalTracked: sortedAccounts.length,
+        }
       });
     } catch (error: any) {
       console.error("Helius holders error:", error.message);

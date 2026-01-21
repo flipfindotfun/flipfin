@@ -22,7 +22,7 @@ import { BirdeyeChart } from "@/components/birdeye-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
-type TradeTab = "trades" | "orders" | "positions" | "history" | "holders" | "topTraders" | "devTokens";
+type TradeTab = "trades" | "orders" | "positions" | "history" | "holders" | "holderChart" | "devTokens";
 type MobileView = "chartTrade" | "trades" | "info";
 
 export default function TradePage() {
@@ -53,6 +53,7 @@ export default function TradePage() {
   const [holders, setHolders] = useState<any[]>([]);
   const [holdersLoading, setHoldersLoading] = useState(false);
   const [holdersCount, setHoldersCount] = useState(0);
+  const [holdersDistribution, setHoldersDistribution] = useState<{ top10: number; top100: number; top500: number; totalTracked: number } | null>(null);
   const [quoteInfo, setQuoteInfo] = useState<{ outAmount: string; priceImpact: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -139,11 +140,14 @@ export default function TradePage() {
     if (!address) return;
     setHoldersLoading(true);
     try {
-      const res = await fetch(`/api/token/holders?address=${address}&limit=30`);
+      const res = await fetch(`/api/token/holders?address=${address}&limit=50`);
       const data = await res.json();
       if (data.holders && Array.isArray(data.holders)) {
         setHolders(data.holders);
         setHoldersCount(data.total || data.holders.length);
+        if (data.distribution) {
+          setHoldersDistribution(data.distribution);
+        }
       }
     } catch (e) {
       console.error("Error fetching holders:", e);
@@ -552,7 +556,7 @@ export default function TradePage() {
                   { id: "trades", label: "Trades" },
                   { id: "positions", label: "Positions" },
                   { id: "holders", label: "Holders" },
-                  { id: "topTraders", label: "Top" },
+                  { id: "holderChart", label: "Distribution" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -586,7 +590,7 @@ export default function TradePage() {
                 />
               )}
               {activeTradeTab === "holders" && <HoldersTable holders={holders} loading={holdersLoading} />}
-              {activeTradeTab === "topTraders" && <HoldersTable holders={holders.slice(0, 10)} loading={holdersLoading} />}
+              {activeTradeTab === "holderChart" && <HolderDistributionChart holders={holders} loading={holdersLoading} totalHolders={holdersCount} distribution={holdersDistribution} />}
             </div>
           </div>
         </div>
@@ -680,7 +684,7 @@ export default function TradePage() {
                 { id: "trades", label: "Trades" },
                 { id: "positions", label: "Positions" },
                 { id: "holders", label: "Holders" },
-                { id: "topTraders", label: "Top" },
+                { id: "holderChart", label: "Distribution" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -714,7 +718,7 @@ export default function TradePage() {
                 />
               )}
               {activeTradeTab === "holders" && <HoldersTable holders={holders} loading={holdersLoading} />}
-              {activeTradeTab === "topTraders" && <HoldersTable holders={holders.slice(0, 10)} loading={holdersLoading} />}
+              {activeTradeTab === "holderChart" && <HolderDistributionChart holders={holders} loading={holdersLoading} totalHolders={holdersCount} distribution={holdersDistribution} />}
             </div>
           </div>
         )}
@@ -1403,6 +1407,11 @@ function TradesTable({ trades, loading }: { trades: any[]; loading: boolean }) {
 }
 
 function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }) {
+  const [page, setPage] = useState(1);
+  const perPage = 10;
+  const totalPages = Math.ceil(holders.length / perPage);
+  const paginatedHolders = holders.slice((page - 1) * perPage, page * perPage);
+
   if (loading && holders.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -1416,28 +1425,187 @@ function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }
   }
 
   return (
-    <div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
-        <span>#</span>
-        <span>Address</span>
-        <span>%</span>
-        <span className="hidden sm:block">Txns</span>
-      </div>
-      {holders.map((holder) => (
-        <div key={holder.rank} className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
-          <span className="text-gray-400 text-[10px] sm:text-sm">{holder.rank}</span>
-          <a 
-            href={`https://solscan.io/account/${holder.address}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#02c076] font-mono hover:underline truncate text-[10px] sm:text-sm"
-          >
-            {holder.addressShort}
-          </a>
-          <span className="text-white font-bold text-[10px] sm:text-sm">{holder.percentage?.toFixed(1)}%</span>
-          <span className="text-gray-400 text-[10px] hidden sm:block">{holder.txCount || "-"}</span>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
+          <span>#</span>
+          <span>Address</span>
+          <span>%</span>
+          <span className="hidden sm:block">Txns</span>
         </div>
-      ))}
+        {paginatedHolders.map((holder) => (
+          <div key={holder.rank} className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
+            <span className="text-gray-400 text-[10px] sm:text-sm">{holder.rank}</span>
+            <a 
+              href={`https://solscan.io/account/${holder.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#02c076] font-mono hover:underline truncate text-[10px] sm:text-sm"
+            >
+              {holder.addressShort}
+            </a>
+            <span className="text-white font-bold text-[10px] sm:text-sm">{holder.percentage?.toFixed(1)}%</span>
+            <span className="text-gray-400 text-[10px] hidden sm:block">{holder.txCount || "-"}</span>
+          </div>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-3 py-2 border-t border-[#1e2329] bg-[#0b0e11]">
+          <span className="text-[10px] text-gray-500">{holders.length} holders</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-2 py-1 text-[10px] bg-[#1e2329] hover:bg-[#2a3139] rounded text-white disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="text-[10px] text-gray-400 px-2">{page}/{totalPages}</span>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-2 py-1 text-[10px] bg-[#1e2329] hover:bg-[#2a3139] rounded text-white disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HolderDistributionChart({ holders, loading, totalHolders, distribution }: { holders: any[]; loading: boolean; totalHolders: number; distribution: { top10: number; top100: number; top500: number; totalTracked: number } | null }) {
+  if (loading && holders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-5 h-5 animate-spin text-[#02c076]" />
+      </div>
+    );
+  }
+
+  if (holders.length === 0) {
+    return <EmptyState message="No holder data for distribution" />;
+  }
+
+  let top10: number;
+  let next90: number;
+  let next400: number;
+  let rest: number;
+  
+  if (distribution) {
+    top10 = distribution.top10;
+    next90 = distribution.top100 - distribution.top10;
+    next400 = distribution.top500 - distribution.top100;
+    rest = Math.max(0, 100 - distribution.top500);
+  } else {
+    top10 = holders.slice(0, 10).reduce((sum, h) => sum + (h.percentage || 0), 0);
+    next90 = holders.slice(10, 100).reduce((sum, h) => sum + (h.percentage || 0), 0);
+    next400 = holders.slice(100, 500).reduce((sum, h) => sum + (h.percentage || 0), 0);
+    rest = Math.max(0, 100 - top10 - next90 - next400);
+  }
+
+  const segments = [
+    { label: "Top 10", percent: top10, color: "#f6465d", holders: "1-10" },
+    { label: "11-100", percent: next90, color: "#f7931a", holders: "11-100" },
+    { label: "101-500", percent: next400, color: "#02c076", holders: "101-500" },
+    { label: "501+", percent: rest, color: "#3861fb", holders: `501-${totalHolders || "All"}` },
+  ].filter(s => s.percent > 0);
+
+  const total = segments.reduce((sum, s) => sum + s.percent, 0);
+  
+  let currentAngle = -90;
+  const pieSegments = segments.map((segment) => {
+    const angle = (segment.percent / total) * 360;
+    const startAngle = currentAngle;
+    currentAngle += angle;
+    return { ...segment, startAngle, angle };
+  });
+
+  const polarToCartesian = (cx: number, cy: number, radius: number, angle: number) => {
+    const rad = (angle * Math.PI) / 180;
+    return {
+      x: cx + radius * Math.cos(rad),
+      y: cy + radius * Math.sin(rad),
+    };
+  };
+
+  const describeArc = (cx: number, cy: number, radius: number, startAngle: number, endAngle: number) => {
+    const start = polarToCartesian(cx, cy, radius, endAngle);
+    const end = polarToCartesian(cx, cy, radius, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
+  };
+
+  return (
+    <div className="flex flex-col h-full p-4">
+      <div className="text-center mb-4">
+        <h3 className="text-sm font-bold text-white mb-1">Holder Distribution</h3>
+        <p className="text-[10px] text-gray-500">{totalHolders.toLocaleString()} total holders</p>
+      </div>
+      
+      <div className="flex items-center justify-center flex-1">
+        <div className="relative">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            {pieSegments.map((segment, i) => (
+              <path
+                key={i}
+                d={describeArc(90, 90, 70, segment.startAngle, segment.startAngle + segment.angle - 0.5)}
+                fill={segment.color}
+                stroke="#0b0e11"
+                strokeWidth="2"
+                className="transition-opacity hover:opacity-80"
+              />
+            ))}
+            <circle cx="90" cy="90" r="35" fill="#0b0e11" />
+            <text x="90" y="85" textAnchor="middle" className="fill-white text-[10px] font-bold">
+              {total.toFixed(1)}%
+            </text>
+            <text x="90" y="100" textAnchor="middle" className="fill-gray-500 text-[8px]">
+              tracked
+            </text>
+          </svg>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        {segments.map((segment, i) => (
+          <div key={i} className="flex items-center gap-2 bg-[#1e2329] rounded-lg px-3 py-2">
+            <div 
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: segment.color }}
+            />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-white truncate">{segment.label}</p>
+              <p className="text-[9px] text-gray-500">#{segment.holders}</p>
+            </div>
+            <p className="text-[10px] font-bold text-white ml-auto">{segment.percent.toFixed(1)}%</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-[#1e2329]">
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="bg-[#1e2329] rounded-lg p-2">
+            <p className="text-[9px] text-gray-500 uppercase">Top 10 Hold</p>
+            <p className={cn(
+              "text-sm font-bold",
+              top10 > 50 ? "text-[#f6465d]" : top10 > 30 ? "text-[#f7931a]" : "text-[#02c076]"
+            )}>
+              {top10.toFixed(1)}%
+            </p>
+          </div>
+          <div className="bg-[#1e2329] rounded-lg p-2">
+            <p className="text-[9px] text-gray-500 uppercase">Distribution</p>
+            <p className={cn(
+              "text-sm font-bold",
+              top10 > 50 ? "text-[#f6465d]" : top10 > 30 ? "text-[#f7931a]" : "text-[#02c076]"
+            )}>
+              {top10 > 50 ? "Poor" : top10 > 30 ? "Fair" : "Good"}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

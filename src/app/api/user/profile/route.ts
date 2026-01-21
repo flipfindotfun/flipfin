@@ -83,7 +83,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Wallet address is required" }, { status: 400 });
   }
 
-  // Check if profile exists
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("*")
@@ -91,7 +90,6 @@ export async function POST(req: Request) {
     .single();
 
   if (existingProfile) {
-    // Only update referred_by if not set
     if (!existingProfile.referred_by && referredBy && referredBy !== existingProfile.referral_code) {
       const { error: updateError } = await supabase
         .from("profiles")
@@ -106,7 +104,6 @@ export async function POST(req: Request) {
     return NextResponse.json(existingProfile);
   }
 
-  // Create new profile with referral
   const referralCode = nanoid(8);
   const { data: newProfile, error: createError } = await supabase
     .from("profiles")
@@ -123,4 +120,69 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(newProfile);
+}
+
+export async function PUT(req: Request) {
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  
+  const { wallet, newReferralCode } = body;
+
+  if (!wallet || !newReferralCode) {
+    return NextResponse.json({ error: "Wallet and new referral code required" }, { status: 400 });
+  }
+
+  if (newReferralCode.length < 4 || newReferralCode.length > 12) {
+    return NextResponse.json({ error: "Referral code must be 4-12 characters" }, { status: 400 });
+  }
+
+  if (!/^[a-zA-Z0-9]+$/.test(newReferralCode)) {
+    return NextResponse.json({ error: "Referral code must be alphanumeric only" }, { status: 400 });
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("wallet_address", wallet)
+    .single();
+
+  if (!existingProfile) {
+    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  }
+
+  if (existingProfile.referral_code_changed_at) {
+    return NextResponse.json({ error: "You can only change your referral code once" }, { status: 400 });
+  }
+
+  const { data: codeExists } = await supabase
+    .from("profiles")
+    .select("wallet_address")
+    .ilike("referral_code", newReferralCode)
+    .single();
+
+  if (codeExists) {
+    return NextResponse.json({ error: "This referral code is already taken" }, { status: 400 });
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ 
+      referral_code: newReferralCode,
+      referral_code_changed_at: new Date().toISOString()
+    })
+    .eq("wallet_address", wallet);
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ 
+    success: true, 
+    message: "Referral code updated successfully",
+    referral_code: newReferralCode
+  });
 }

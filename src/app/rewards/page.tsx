@@ -50,6 +50,9 @@ export default function RewardsPage() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [leaderboardType, setLeaderboardType] = useState<"points" | "volume">("points");
   const [userRank, setUserRank] = useState<number | null>(null);
+  const [editingReferralCode, setEditingReferralCode] = useState(false);
+  const [newReferralCode, setNewReferralCode] = useState("");
+  const [savingReferralCode, setSavingReferralCode] = useState(false);
 
   useEffect(() => {
     if (publicKey) {
@@ -147,6 +150,31 @@ export default function RewardsPage() {
     toast.success("Referral link copied!");
   };
 
+  const saveNewReferralCode = async () => {
+    if (!newReferralCode.trim() || !publicKey) return;
+    setSavingReferralCode(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: publicKey, newReferralCode: newReferralCode.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Referral code updated!");
+        setEditingReferralCode(false);
+        setNewReferralCode("");
+        refreshProfile();
+      } else {
+        toast.error(data.error || "Failed to update referral code");
+      }
+    } catch (err) {
+      toast.error("Failed to update referral code");
+    } finally {
+      setSavingReferralCode(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0b0e11] overflow-y-auto">
       <Header />
@@ -224,13 +252,13 @@ export default function RewardsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                  placeholder="Enter referral code"
-                  className="flex-1 bg-[#0b0e11] border border-[#1e2329] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
-                />
+                  <input
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    placeholder="Enter referral code"
+                    className="flex-1 bg-[#0b0e11] border border-[#1e2329] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+                  />
                 <Button 
                   onClick={applyReferralCode}
                   disabled={!referralCode.trim() || applyingCode}
@@ -305,22 +333,70 @@ export default function RewardsPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-sm text-gray-400">Share your referral link. Get 30 points when they reach $50 volume!</p>
-                <div className="flex gap-2">
-                  <div className="flex-1 bg-[#0b0e11] border border-[#1e2329] rounded-lg px-3 py-2 text-xs font-mono text-gray-400 truncate flex items-center">
-                    {profile ? `${typeof window !== 'undefined' ? window.location.origin : ''}?ref=${profile.referral_code}` : "Generate wallet to see link"}
+<div className="space-y-3">
+                  <p className="text-sm text-gray-400">Share your referral link. Get 30 points when they reach $50 volume!</p>
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-[#0b0e11] border border-[#1e2329] rounded-lg px-3 py-2 text-xs font-mono text-gray-400 truncate flex items-center">
+                      {profile ? `${typeof window !== 'undefined' ? window.location.origin : ''}?ref=${profile.referral_code}` : "Generate wallet to see link"}
+                    </div>
+                    <Button 
+                      onClick={copyReferral}
+                      disabled={!profile}
+                      size="sm"
+                      className="bg-[#02c076] hover:bg-[#02a566] text-black font-bold h-9"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={copyReferral}
-                    disabled={!profile}
-                    size="sm"
-                    className="bg-[#02c076] hover:bg-[#02a566] text-black font-bold h-9"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  
+                  {profile && !profile.referral_code_changed_at && (
+                    <div className="pt-2">
+                      {!editingReferralCode ? (
+                        <button
+                          onClick={() => setEditingReferralCode(true)}
+                          className="text-xs text-[#02c076] hover:underline"
+                        >
+                          Customize your referral code (one-time only)
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newReferralCode}
+                                onChange={(e) => setNewReferralCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12))}
+                                placeholder="Enter custom code (4-12 chars)"
+                                className="flex-1 bg-[#0b0e11] border border-[#1e2329] rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#02c076]"
+                              />
+                            <Button 
+                              onClick={saveNewReferralCode}
+                              disabled={newReferralCode.length < 4 || savingReferralCode}
+                              size="sm"
+                              className="bg-[#02c076] hover:bg-[#02a566] text-black font-bold h-9"
+                            >
+                              {savingReferralCode ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+                            </Button>
+                            <Button 
+                              onClick={() => { setEditingReferralCode(false); setNewReferralCode(""); }}
+                              size="sm"
+                              variant="outline"
+                              className="border-[#1e2329] text-gray-400 h-9"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-yellow-500 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Warning: You can only change your referral code once!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {profile?.referral_code_changed_at && (
+                    <p className="text-[10px] text-gray-500">Referral code already customized</p>
+                  )}
                 </div>
-              </div>
 
               {/* Referrals List */}
               {referralData?.referrals && referralData.referrals.length > 0 && (

@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     const { data: referrer } = await supabase
       .from("profiles")
       .select("wallet_address, referral_code")
-      .eq("referral_code", referralCode)
+      .ilike("referral_code", referralCode)
       .single();
 
     if (!referrer) {
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
 
     await supabase
       .from("profiles")
-      .update({ referred_by: referralCode })
+      .update({ referred_by: referrer.referral_code })
       .eq("wallet_address", wallet);
 
     const { data: refereeProfile } = await supabase
