@@ -130,10 +130,27 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   
-  const { wallet, newReferralCode } = body;
+  const { wallet, newReferralCode, twitterHandle } = body;
 
-  if (!wallet || !newReferralCode) {
-    return NextResponse.json({ error: "Wallet and new referral code required" }, { status: 400 });
+  if (!wallet) {
+    return NextResponse.json({ error: "Wallet address required" }, { status: 400 });
+  }
+
+  // Handle Twitter Connection
+  if (twitterHandle !== undefined) {
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ twitter_handle: twitterHandle })
+      .eq("wallet_address", wallet);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, message: "Twitter handle updated" });
+  }
+
+  if (!newReferralCode) {
+    return NextResponse.json({ error: "New referral code required" }, { status: 400 });
   }
 
   if (newReferralCode.length < 4 || newReferralCode.length > 12) {

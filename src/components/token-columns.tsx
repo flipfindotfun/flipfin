@@ -588,7 +588,7 @@ function FilterModal({ filters, setFilters, onClose }: {
               >
                 {localFilters.onlyWithTwitter && <Check className="w-3 h-3 text-white" />}
               </div>
-              <span className="text-sm text-white">Only with Twitter/X</span>
+              <span className="text-sm text-white">Only with X</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <div 

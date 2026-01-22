@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 const DEV_EMAIL = "developer@flipfin.fun";
-const DEV_TWITTER = "@flipfindotfun";
+const DEV_TWITTER = "@flipfinfun";
 const COMMUNITY_X = "https://x.com/i/communities/2013802185507889401";
 
 function XIcon({ className }: { className?: string }) {

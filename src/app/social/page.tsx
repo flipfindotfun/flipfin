@@ -123,7 +123,8 @@ export default function SocialProofPage() {
                     <Shield className="w-5 h-5 text-[#02c076]" />
                     Social Proof Engine
                   </h1>
-                  <p className="text-sm text-gray-500">Real-time Twitter analysis & hype detection</p>
+                    <p className="text-sm text-gray-500">Real-time X analysis & hype detection</p>
+
                 </div>
 
                 <div className="flex items-center gap-2">

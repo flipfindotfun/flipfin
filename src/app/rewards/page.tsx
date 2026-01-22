@@ -18,13 +18,16 @@ import {
   Info,
   Loader2,
   BarChart3,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Medal,
-  Crown,
-  Flame
-} from "lucide-react";
+    CheckCircle,
+    Clock,
+    AlertCircle,
+    Medal,
+    Crown,
+    Flame,
+    Wallet,
+    Send
+  } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -36,6 +39,12 @@ interface LeaderboardEntry {
   points: number;
   volume: number;
 }
+
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
 
 export default function RewardsPage() {
   const { publicKey } = useWallet();
@@ -53,11 +62,33 @@ export default function RewardsPage() {
   const [editingReferralCode, setEditingReferralCode] = useState(false);
   const [newReferralCode, setNewReferralCode] = useState("");
   const [savingReferralCode, setSavingReferralCode] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+    const [loadingTasks, setLoadingTasks] = useState(false);
+      const [xPoints, setXPoints] = useState(0);
+      const [claimedXPoints, setClaimedXPoints] = useState(0);
+      const [xHandle, setXHandle] = useState<string | null>(null);
+      const [verifyingX, setVerifyingX] = useState(false);
+      const [claimingX, setClaimingX] = useState(false);
+    
+    useEffect(() => {
+      // Check for success/error query params
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("success") === "twitter_connected") {
+        toast.success("X account connected successfully!");
 
-  useEffect(() => {
+        // Remove the query param from URL without refreshing
+        window.history.replaceState({}, document.title, window.location.pathname);
+        fetchTasks();
+      } else if (urlParams.get("error")) {
+        const error = urlParams.get("error");
+        toast.error(`X connection failed: ${error}`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
     if (publicKey) {
       fetchHistory();
       fetchReferralData();
+      fetchTasks();
       
       const pendingRef = localStorage.getItem("pendingReferralCode");
       if (pendingRef && !referralData?.myReferral) {
@@ -175,6 +206,92 @@ export default function RewardsPage() {
     }
   };
 
+    const fetchTasks = async () => {
+      if (!publicKey) return;
+      setLoadingTasks(true);
+      try {
+        const res = await fetch(`/api/rewards/tasks?wallet=${publicKey}`);
+        const data = await res.json();
+          if (res.ok) {
+            setTasks(data.tasks || []);
+            setXHandle(data.twitter_handle);
+            setXPoints(data.twitter_points);
+            setClaimedXPoints(data.claimed_twitter_points || 0);
+          }
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+      } finally {
+        setLoadingTasks(false);
+      }
+    };
+
+    const claimXPoints = async () => {
+      if (!publicKey || xPoints <= 0) return;
+      setClaimingX(true);
+      const t = toast.loading("Claiming X-Points...");
+      try {
+        const res = await fetch("/api/rewards/yapping/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: publicKey })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Points claimed!", { id: t });
+          fetchTasks();
+          refreshProfile();
+          fetchHistory();
+        } else {
+          toast.error(data.error || "Claim failed", { id: t });
+        }
+      } catch (err) {
+        toast.error("Failed to claim points", { id: t });
+      } finally {
+        setClaimingX(false);
+      }
+    };
+
+    const verifyTask = async (taskId: string) => {
+      if (!publicKey) return;
+      
+      const task = tasks.find(t => t.id === taskId);
+      if (task && task.current_value < task.target_value) {
+        toast.error(`Insufficient progress. Required: $${task.target_value.toLocaleString()}, Current: $${Math.floor(task.current_value).toLocaleString()}`);
+        return;
+      }
+
+      const t = toast.loading(`Verifying ${taskId}...`);
+
+    try {
+      const endpoint = taskId === 'yapping_post' ? "/api/rewards/yapping/verify" : "/api/rewards/tasks";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: publicKey, taskId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Task completed!", { id: t });
+        fetchTasks();
+        refreshProfile();
+        fetchHistory();
+      } else {
+        toast.error(data.error || "Verification failed", { id: t });
+      }
+    } catch (err) {
+      toast.error("Failed to verify task", { id: t });
+    }
+  };
+
+  const connectTwitter = () => {
+    if (!publicKey) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    // Redirect to the backend auth route which will handle the Twitter OAuth flow
+    window.location.href = `/api/twitter/auth?wallet=${publicKey}`;
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0b0e11] overflow-y-auto">
       <Header />
@@ -215,6 +332,228 @@ export default function RewardsPage() {
           
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#02c076]/5 rounded-full blur-[100px] -mr-32 -mt-32" />
+        </div>
+
+        {/* Reward Tasks */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-white italic flex items-center gap-2">
+              <Star className="w-5 h-5 text-[#02c076]" />
+              REWARD TASKS
+            </h2>
+            {xHandle && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg">
+                  <XIcon className="w-3.5 h-3.5 text-white" />
+                  <span className="text-xs font-bold text-gray-300">@{xHandle}</span>
+                  <div className="w-px h-3 bg-white/20 mx-1" />
+                  <span className="text-xs font-black text-[#02c076]">{xPoints} X-Points</span>
+                </div>
+              )}
+
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tasks.map((task) => (
+              <Card key={task.id} className={cn(
+                "bg-[#14191f] border-[#1e2329] p-5 hover:border-[#02c076]/30 transition-all relative overflow-hidden",
+                task.completed && "border-[#02c076]/50 bg-[#02c076]/5"
+              )}>
+                <div className="flex items-start justify-between gap-4 relative z-10">
+                  <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "p-2.5 rounded-xl",
+                          task.id === 'first_deposit_100' ? "bg-blue-500/10 text-blue-400" :
+                          task.id === 'connect_x' ? "bg-purple-500/10 text-purple-400" :
+                          task.id.startsWith('volume_') ? "bg-[#02c076]/10 text-[#02c076]" :
+                          "bg-yellow-500/10 text-yellow-400"
+                        )}>
+                          {task.id === 'first_deposit_100' ? <Wallet className="w-5 h-5" /> :
+                           task.id === 'connect_x' ? <XIcon className="w-5 h-5" /> :
+                           task.id.startsWith('volume_') ? <BarChart3 className="w-5 h-5" /> :
+                           <Send className="w-5 h-5" />}
+                        </div>
+
+
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold text-white">{task.title}</h3>
+                      <p className="text-[11px] text-gray-500 leading-tight">{task.description}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[10px] font-black text-[#02c076] bg-[#02c076]/10 px-2 py-0.5 rounded uppercase">
+                            +{task.points || '??'} Points
+                          </span>
+                          {task.type === 'recurring' && (
+                            <span className="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-0.5 rounded uppercase">
+                              Recurring
+                            </span>
+                          )}
+                        </div>
+                        
+                          {/* Progress Bar */}
+                          {!task.completed && (
+                            <div className="mt-3 space-y-1">
+                              <div className="flex justify-between text-[9px] font-bold">
+                                <span className="text-gray-500 uppercase">Progress</span>
+                                <span className="text-gray-300">
+                                  {task.target_value > 0 ? (
+                                    <>
+                                      {task.id === 'first_deposit_100' ? `$${Math.floor(task.current_value)}` : `$${Math.floor(task.current_value).toLocaleString()}`} 
+                                      / ${task.target_value.toLocaleString()}
+                                    </>
+                                  ) : (
+                                    "Locked"
+                                  )}
+                                </span>
+                              </div>
+                              {task.target_value > 0 && (
+                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                  <div 
+                                    className={cn(
+                                      "h-full transition-all duration-500",
+                                      task.current_value >= task.target_value ? "bg-[#02c076]" : "bg-blue-500"
+                                    )}
+                                    style={{ width: `${Math.min(100, (task.current_value / task.target_value) * 100)}%` }}
+                                  />
+                                </div>
+                              )}
+                              {task.id !== 'connect_x' && task.current_value < task.target_value && task.target_value > 0 && (
+                                <p className="text-[9px] text-yellow-500/70 font-medium">
+                                  Required: ${task.target_value.toLocaleString()}, Current: ${Math.floor(task.current_value).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                    </div>
+                  </div>
+                  
+                  {task.completed ? (
+                    <div className="bg-[#02c076] rounded-full p-1">
+                      <CheckCircle className="w-4 h-4 text-black" />
+                    </div>
+                  ) : (
+                      <div className="flex flex-col items-end gap-2">
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              if (task.id === 'connect_x') {
+                                if (xHandle) {
+                                  verifyTask(task.id);
+                                } else {
+                                  connectTwitter();
+                                }
+                              } else {
+                                verifyTask(task.id);
+                              }
+                            }}
+                            disabled={
+                              (task.id !== 'connect_x' && task.current_value < task.target_value) ||
+                              (task.id === 'yapping_post' && !xHandle)
+                            }
+                            className={cn(
+                              "h-8 px-4 text-xs font-black italic uppercase",
+                              task.id === 'connect_x' ? (profile?.twitter_handle || xHandle ? "bg-[#02c076] hover:bg-[#02a566] text-black" : "bg-white hover:bg-gray-200 text-black") : 
+                              ((task.current_value >= task.target_value && (task.id !== 'yapping_post' || profile?.twitter_handle || xHandle)) ? "bg-[#02c076] hover:bg-[#02a566] text-black" : "bg-gray-800 text-gray-500 cursor-not-allowed")
+                            )}
+                          >
+                            {task.id === 'connect_x' ? (profile?.twitter_handle || xHandle ? "Claim" : "Connect") : (task.id === 'yapping_post' && !(profile?.twitter_handle || xHandle) ? "Locked" : (task.current_value >= task.target_value ? "Claim" : "Locked"))}
+                          </Button>
+                      </div>
+
+                  )}
+                </div>
+                
+                {task.completed && (
+                  <div className="absolute top-0 right-0 p-1 bg-[#02c076]/10 rounded-bl-xl">
+                    <CheckCircle className="w-3 h-3 text-[#02c076]" />
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+
+          <Card className="bg-gradient-to-r from-[#14191f] to-[#0b0e11] border-[#1e2329] p-6 relative overflow-hidden group">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="space-y-3 text-center md:text-left">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#02c076]/10 border border-[#02c076]/20 text-[#02c076] text-[10px] font-bold uppercase tracking-wider">
+                      <Flame className="w-3 h-3" />
+                      NEW: YAPPING SYSTEM
+                    </div>
+                    {xHandle && (
+                      <button 
+                        onClick={() => verifyTask('yapping_post')}
+                        disabled={verifyingX}
+                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 transition-colors"
+                        title="Refresh Points"
+                      >
+                        <Clock className={cn("w-3.5 h-3.5", verifyingX && "animate-spin")} />
+                      </button>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black text-white italic">POST & EARN REWARDS</h3>
+                  <p className="text-sm text-gray-400 max-w-md">
+                    Post about your wins or thoughts on <span className="text-[#02c076] font-bold">Flip Finance</span>. 
+                    Tag <span className="text-white font-bold">@flipfinfun</span> and get points based on post quality!
+                  </p>
+                  
+                  {/* Sample Post */}
+                  <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/5 space-y-2 max-w-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#02c076]/20 flex items-center justify-center">
+                        <XIcon className="w-3 h-3 text-[#02c076]" />
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-400">Sample Post</span>
+                    </div>
+                    <p className="text-[11px] text-gray-300 italic">
+                      "Just made 5 SOL on $BONK using @flipfinfun! The fastest sniper in the game. 🚀💨 #Solana #FlipFin"
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 justify-center md:justify-start pt-2">
+                     <div className="text-center">
+                        <p className="text-lg font-black text-white">{xPoints}</p>
+                        <p className="text-[9px] text-gray-500 uppercase">Unclaimed Points</p>
+                     </div>
+                   <div className="w-px h-8 bg-[#1e2329]" />
+                   <div className="text-center">
+                      <p className="text-lg font-black text-[#02c076]">{claimedXPoints}</p>
+                      <p className="text-[9px] text-gray-500 uppercase">Claimed Points</p>
+                   </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2 w-full md:w-auto">
+                <Button 
+                  disabled={!xHandle}
+                  onClick={() => window.open(`https://x.com/intent/tweet?text=I'm trading on @flipfinfun - the fastest Solana sniper! 🚀`, '_blank')}
+                  className={cn(
+                    "font-black italic uppercase px-8 group-hover:scale-105 transition-transform",
+                    xHandle ? "bg-white hover:bg-gray-200 text-black" : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                  )}
+                >
+                  <XIcon className="w-4 h-4 mr-2" />
+                  {xHandle ? "Post Now" : "Connect X to Post"}
+                </Button>
+                
+                {xPoints > 0 && (
+                  <Button 
+                    onClick={claimXPoints}
+                    disabled={claimingX}
+                    variant="outline"
+                    className="border-[#02c076] text-[#02c076] hover:bg-[#02c076] hover:text-black font-black italic uppercase"
+                  >
+                    {claimingX ? <Loader2 className="w-4 h-4 animate-spin" /> : `Claim ${xPoints} Points`}
+                  </Button>
+                )}
+                
+                <p className="text-[10px] text-center text-gray-500">Points awarded automatically within 24h</p>
+              </div>
+            </div>
+            {/* Background pattern */}
+            <div className="absolute -right-10 -bottom-10 opacity-5 group-hover:opacity-10 transition-opacity">
+              <XIcon className="w-40 h-40" />
+            </div>
+          </Card>
         </div>
 
         {/* Stats Grid */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -121,26 +121,37 @@ export default function TradePage() {
     setLoading(false);
   }, [address, tokens]);
 
-  const fetchTrades = useCallback(async () => {
-    if (!address) return;
-    setTradesLoading(true);
-    try {
-      const res = await fetch(`/api/token/trades?address=${address}&limit=50`);
-      const data = await res.json();
-      if (data.trades && Array.isArray(data.trades)) {
-        setTrades(data.trades);
+    const fetchTrades = useCallback(async (silent = false) => {
+      if (!address) return;
+      if (!silent) setTradesLoading(true);
+      try {
+        const res = await fetch(`/api/token/trades?address=${address}&limit=50`);
+        const data = await res.json();
+        if (data.trades && Array.isArray(data.trades)) {
+          setTrades(prev => {
+            // Merge trades to keep old ones and add new ones
+            const prevMap = new Map(prev.map(t => [t.id || t.txHash, t]));
+            const newTrades = data.trades.filter((t: any) => !prevMap.has(t.id || t.txHash));
+            
+            // If no new trades, just return prev to avoid re-renders
+            if (newTrades.length === 0) return prev;
+            
+            // Prepend new trades and limit to 100
+            return [...newTrades, ...prev].slice(0, 100);
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching trades:", e);
       }
-    } catch (e) {
-      console.error("Error fetching trades:", e);
-    }
-    setTradesLoading(false);
-  }, [address]);
+      if (!silent) setTradesLoading(false);
+    }, [address]);
 
-  const fetchHolders = useCallback(async () => {
+    const fetchHolders = useCallback(async () => {
+
     if (!address) return;
     setHoldersLoading(true);
     try {
-      const res = await fetch(`/api/token/holders?address=${address}&limit=50`);
+      const res = await fetch(`/api/token/holders?address=${address}&limit=50&pnl=true`);
       const data = await res.json();
       if (data.holders && Array.isArray(data.holders)) {
         setHolders(data.holders);
@@ -192,14 +203,15 @@ export default function TradePage() {
     fetchHolders();
   }, []);
   
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchTrades();
-      fetchToken(true);
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [address, fetchTrades, fetchToken]);
+    useEffect(() => {
+      const interval = setInterval(() => {
+        fetchTrades(true);
+        fetchToken(true);
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }, [address, fetchTrades, fetchToken]);
+
 
   useEffect(() => {
     if (token && holdersCount > 0 && !aiAnalysis && !aiLoading) {
@@ -207,12 +219,19 @@ export default function TradePage() {
     }
   }, [token, holdersCount, fetchAiAnalysis]);
 
+  const lastParamsRef = useRef<{ token: string; tab: string } | null>(null);
+
   const fetchQuote = useCallback(async () => {
     if (!token) return;
     
+    // Clear quote if token or tab changed to avoid showing wrong estimate
+    if (lastParamsRef.current?.token !== token.address || lastParamsRef.current?.tab !== activeTab) {
+      setQuoteInfo(null);
+    }
+    lastParamsRef.current = { token: token.address, tab: activeTab };
+
     setQuoteLoading(true);
     setQuoteError(null);
-    setQuoteInfo(null);
 
     try {
       let inputMint: string;
@@ -997,14 +1016,22 @@ function TradePanelContent({
               </div>
             )}
 
-            {quoteInfo && !quoteLoading && (
-              <div className="bg-[#1e2329] rounded p-2 text-[10px]">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Est. receive</span>
-                  <span className="text-white font-mono">~{quoteInfo.outAmount} {activeTab === "buy" ? token.symbol : "SOL"}</span>
+              {quoteInfo && (
+                <div className="bg-[#1e2329] rounded p-2 text-[10px]">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">Est. receive</span>
+                      {quoteLoading && <Loader2 className="w-2.5 h-2.5 animate-spin text-[#02c076]" />}
+                    </div>
+                    <span className={cn(
+                      "text-white font-mono transition-opacity",
+                      quoteLoading ? "opacity-50" : "opacity-100"
+                    )}>
+                      ~{quoteInfo.outAmount} {activeTab === "buy" ? token.symbol : "SOL"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <Button
               onClick={handleTrade}
@@ -1360,51 +1387,119 @@ function PositionDisplay({ position, loading, token, publicKey }: { position: an
   );
 }
 
-function TradesTable({ trades, loading }: { trades: any[]; loading: boolean }) {
-  if (loading && trades.length === 0) {
+  const TradeRow = React.memo(({ trade, isNew }: { trade: any; isNew: boolean }) => {
+    const [age, setAge] = useState(trade.age);
+
+    useEffect(() => {
+      if (!trade.blockTime) return;
+      
+      const updateAge = () => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - trade.blockTime;
+        if (diff < 0) setAge("0s");
+        else if (diff < 60) setAge(`${Math.floor(diff)}s`);
+        else if (diff < 3600) setAge(`${Math.floor(diff / 60)}m`);
+        else if (diff < 86400) setAge(`${Math.floor(diff / 3600)}h`);
+        else setAge(`${Math.floor(diff / 86400)}d`);
+      };
+
+      updateAge();
+      const interval = setInterval(updateAge, 1000);
+      return () => clearInterval(interval);
+    }, [trade.blockTime]);
+
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-5 h-5 animate-spin text-[#02c076]" />
+      <div 
+        className={cn(
+          "grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 border-b border-[#1e2329]/30 text-xs sm:text-sm transition-colors duration-500",
+          isNew 
+            ? (trade.type === "buy" ? "bg-[#02c076]/20" : "bg-[#f6465d]/20")
+            : "hover:bg-[#1e2329]/50"
+        )}
+      >
+        <span className="text-gray-400 text-[10px] sm:text-xs">{age}</span>
+        <span className={cn(
+          "font-bold text-[10px] sm:text-sm",
+          trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]"
+        )}>
+          {trade.type === "buy" ? "B" : "S"}
+        </span>
+        <span className="text-gray-400 font-mono text-[10px] hidden sm:block">
+          {trade.price > 0 ? `$${formatPrice(trade.price)}` : "-"}
+        </span>
+        <span className={cn("font-medium text-[10px] sm:text-xs", trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]")}>
+          {formatNumber(trade.amount)}
+        </span>
+        <span className="text-white font-bold text-[10px] sm:text-sm">${formatNumber(trade.amountUsd || 0)}</span>
+        <span className="text-gray-500 font-mono truncate text-[10px] hidden sm:block">{trade.maker}</span>
+      </div>
+    );
+  });
+
+  TradeRow.displayName = "TradeRow";
+
+  function TradesTable({ trades, loading }: { trades: any[]; loading: boolean }) {
+    const [newTradeIds, setNewTradeIds] = useState<Set<string>>(new Set());
+    const prevTradesRef = useRef<any[]>(trades);
+
+    useEffect(() => {
+      // Find truly new trades by comparing IDs
+      const prevIds = new Set(prevTradesRef.current.map(t => t.id || t.txHash));
+      const newlyAdded = trades.filter(t => !prevIds.has(t.id || t.txHash));
+      
+      if (newlyAdded.length > 0) {
+        const newIds = new Set(newlyAdded.map(t => t.id || t.txHash));
+        setNewTradeIds(prev => new Set([...Array.from(prev), ...Array.from(newIds)]));
+        
+        // Clear highlight for these specific IDs after 2 seconds
+        setTimeout(() => {
+          setNewTradeIds(current => {
+            const next = new Set(current);
+            newIds.forEach(id => next.delete(id));
+            return next;
+          });
+        }, 2000);
+      }
+      
+      prevTradesRef.current = trades;
+    }, [trades]);
+
+    if (loading && trades.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="w-5 h-5 animate-spin text-[#02c076]" />
+        </div>
+      );
+    }
+
+    if (trades.length === 0) {
+      return <EmptyState message="No recent trades" />;
+    }
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11] z-10">
+          <span>AGE</span>
+          <span>TYPE</span>
+          <span className="hidden sm:block">PRICE</span>
+          <span>AMT</span>
+          <span>USD</span>
+          <span className="hidden sm:block">MAKER</span>
+        </div>
+        <div className="flex-1">
+          {trades.map((trade) => (
+            <TradeRow 
+              key={trade.id || trade.txHash} 
+              trade={trade} 
+              isNew={newTradeIds.has(trade.id || trade.txHash)} 
+            />
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (trades.length === 0) {
-    return <EmptyState message="No recent trades" />;
-  }
 
-  return (
-    <div>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
-        <span>AGE</span>
-        <span>TYPE</span>
-        <span className="hidden sm:block">PRICE</span>
-        <span>AMT</span>
-        <span>USD</span>
-        <span className="hidden sm:block">MAKER</span>
-      </div>
-      {trades.map((trade, i) => (
-        <div key={trade.id || i} className="grid grid-cols-4 sm:grid-cols-6 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
-          <span className="text-gray-400 text-[10px] sm:text-xs">{trade.age}</span>
-          <span className={cn(
-            "font-bold text-[10px] sm:text-sm",
-            trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]"
-          )}>
-            {trade.type === "buy" ? "B" : "S"}
-          </span>
-          <span className="text-gray-400 font-mono text-[10px] hidden sm:block">
-            {trade.price > 0 ? `$${formatPrice(trade.price)}` : "-"}
-          </span>
-          <span className={cn("font-medium text-[10px] sm:text-xs", trade.type === "buy" ? "text-[#02c076]" : "text-[#f6465d]")}>
-            {formatNumber(trade.amount)}
-          </span>
-          <span className="text-white font-bold text-[10px] sm:text-sm">${formatNumber(trade.amountUsd || 0)}</span>
-          <span className="text-gray-500 font-mono truncate text-[10px] hidden sm:block">{trade.maker}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }) {
   const [page, setPage] = useState(1);
@@ -1427,14 +1522,15 @@ function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 text-[10px] sm:text-xs text-gray-500 font-bold uppercase border-b border-[#1e2329] sticky top-0 bg-[#0b0e11]">
           <span>#</span>
           <span>Address</span>
           <span>%</span>
-          <span className="hidden sm:block">Txns</span>
+          <span>PnL</span>
+          <span className="hidden sm:block">Value</span>
         </div>
         {paginatedHolders.map((holder) => (
-          <div key={holder.rank} className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
+          <div key={holder.rank} className="grid grid-cols-4 sm:grid-cols-5 gap-1 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 hover:bg-[#1e2329]/50 border-b border-[#1e2329]/30 text-xs sm:text-sm">
             <span className="text-gray-400 text-[10px] sm:text-sm">{holder.rank}</span>
             <a 
               href={`https://solscan.io/account/${holder.address}`}
@@ -1444,8 +1540,23 @@ function HoldersTable({ holders, loading }: { holders: any[]; loading: boolean }
             >
               {holder.addressShort}
             </a>
-            <span className="text-white font-bold text-[10px] sm:text-sm">{holder.percentage?.toFixed(1)}%</span>
-            <span className="text-gray-400 text-[10px] hidden sm:block">{holder.txCount || "-"}</span>
+            <span className="text-white font-bold text-[10px] sm:text-sm">{holder.percentage?.toFixed(2)}%</span>
+            <span className={cn(
+              "font-bold text-[10px] sm:text-sm",
+              holder.pnl?.totalPnl > 0 ? "text-[#02c076]" : holder.pnl?.totalPnl < 0 ? "text-[#f6465d]" : "text-gray-500"
+            )}>
+              {holder.pnl ? (
+                <>
+                  {holder.pnl.totalPnl >= 0 ? "+" : ""}{holder.pnl.totalPnl.toFixed(2)} SOL
+                  <span className="text-[8px] ml-0.5">
+                    ({holder.pnl.pnlPercent >= 0 ? "+" : ""}{holder.pnl.pnlPercent.toFixed(0)}%)
+                  </span>
+                </>
+              ) : "-"}
+            </span>
+            <span className="text-gray-400 text-[10px] hidden sm:block">
+              {holder.value > 0 ? `$${formatNumber(holder.value)}` : "-"}
+            </span>
           </div>
         ))}
       </div>

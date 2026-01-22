@@ -77,12 +77,12 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
   };
 
   const openTweet = (tweet: Tweet) => {
-    window.open(`https://twitter.com/${tweet.author.username}/status/${tweet.id}`, "_blank");
+    window.open(`https://x.com/${tweet.author.username}/status/${tweet.id}`, "_blank");
   };
 
   const openProfile = (e: React.MouseEvent, username: string) => {
     e.stopPropagation();
-    window.open(`https://twitter.com/${username}`, "_blank");
+    window.open(`https://x.com/${username}`, "_blank");
   };
 
   return (
