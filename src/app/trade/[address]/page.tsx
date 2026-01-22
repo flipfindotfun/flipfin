@@ -129,15 +129,28 @@ export default function TradePage() {
         const data = await res.json();
         if (data.trades && Array.isArray(data.trades)) {
           setTrades(prev => {
-            // Merge trades to keep old ones and add new ones
-            const prevMap = new Map(prev.map(t => [t.id || t.txHash, t]));
-            const newTrades = data.trades.filter((t: any) => !prevMap.has(t.id || t.txHash));
+            // Combine all trades and filter out duplicates
+            const allTrades = [...data.trades, ...prev];
+            const uniqueMap = new Map();
             
-            // If no new trades, just return prev to avoid re-renders
-            if (newTrades.length === 0) return prev;
+            for (const t of allTrades) {
+              const key = t.txHash || t.id;
+              if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, t);
+              }
+            }
             
-            // Prepend new trades and limit to 100
-            return [...newTrades, ...prev].slice(0, 100);
+            // Convert back to array and sort by blockTime descending
+            const sortedTrades = Array.from(uniqueMap.values())
+              .sort((a, b) => (b.blockTime || 0) - (a.blockTime || 0))
+              .slice(0, 100);
+            
+            // Check if anything actually changed to avoid unnecessary re-renders
+            const prevIds = prev.map(t => t.txHash || t.id).join(",");
+            const currentIds = sortedTrades.map(t => t.txHash || t.id).join(",");
+            
+            if (prevIds === currentIds) return prev;
+            return sortedTrades;
           });
         }
       } catch (e) {
