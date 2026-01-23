@@ -23,7 +23,7 @@ interface SearchResult {
 import { useProfile } from "@/hooks/use-profile";
 
 export function Header() {
-  const { solPrice } = useApp();
+  const { solPrice, prefetchSecurity } = useApp();
   const { profile } = useProfile();
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -115,7 +115,7 @@ export function Header() {
       }
     };
 
-    const debounce = setTimeout(search, 300);
+    const debounce = setTimeout(search, 200);
     return () => clearTimeout(debounce);
   }, [query]);
 
@@ -123,6 +123,11 @@ export function Header() {
     setQuery("");
     setShowResults(false);
     router.push(`/trade/${result.address}`);
+  };
+
+  const handleHover = (address: string) => {
+    router.prefetch(`/trade/${address}`);
+    prefetchSecurity(address);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -177,12 +182,13 @@ export function Header() {
                   </div>
                 ) : results.length > 0 ? (
                   <div className="py-1">
-                    {results.map((result) => (
-                      <button
-                        key={result.address}
-                        onClick={() => handleSelect(result)}
-                        className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#1e2329] transition-colors"
-                      >
+                      {results.map((result) => (
+                        <button
+                          key={result.address}
+                          onClick={() => handleSelect(result)}
+                          onMouseEnter={() => handleHover(result.address)}
+                          className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#1e2329] transition-colors"
+                        >
                         {result.logoURI ? (
                           <img src={result.logoURI} alt={result.symbol} className="w-8 h-8 rounded-lg" />
                         ) : (

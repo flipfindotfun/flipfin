@@ -64,6 +64,26 @@ export function TokenDetailPanel() {
     }
 
     setIsTrading(true);
+    
+    // Optimistic Trade
+    const optimisticTradeId = `pending-${Date.now()}`;
+    const amount = parseFloat(buyAmount);
+    
+    if (!isNaN(amount) && amount > 0) {
+      addTrade({
+        id: optimisticTradeId,
+        tokenAddress: selectedToken.address,
+        tokenSymbol: selectedToken.symbol,
+        type: side,
+        amountIn: amount,
+        amountOut: 0,
+        price: selectedToken.price,
+        timestamp: Date.now(),
+        signature: '',
+        status: 'pending'
+      });
+    }
+
     try {
       const amount = parseFloat(buyAmount);
       if (isNaN(amount) || amount <= 0) {
@@ -118,6 +138,35 @@ export function TokenDetailPanel() {
     navigator.clipboard.writeText(selectedToken.address);
     toast.success("Address copied!");
   };
+
+  if (!selectedToken.security) {
+    return (
+      <div className="flex flex-col h-full bg-[#0a0a0a]">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#1a1a1a] bg-[#0d0d0d]">
+          <div className="flex items-center gap-3 animate-pulse">
+            <div className="w-10 h-10 rounded-xl bg-[#1a1a1a]" />
+            <div className="space-y-2">
+              <div className="w-24 h-4 bg-[#1a1a1a] rounded" />
+              <div className="w-16 h-3 bg-[#1a1a1a] rounded" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="h-[300px] bg-[#0d0d0d] rounded-xl animate-pulse" />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="h-16 bg-[#0d0d0d] rounded-lg animate-pulse" />
+            <div className="h-16 bg-[#0d0d0d] rounded-lg animate-pulse" />
+            <div className="h-16 bg-[#0d0d0d] rounded-lg animate-pulse" />
+          </div>
+          <div className="space-y-3">
+            <div className="w-full h-12 bg-[#0d0d0d] rounded-lg animate-pulse" />
+            <div className="w-full h-12 bg-[#0d0d0d] rounded-lg animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const securityScore = selectedToken.security?.score || 0;
 

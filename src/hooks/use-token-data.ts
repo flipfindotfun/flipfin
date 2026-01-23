@@ -234,11 +234,11 @@ export function useTokenData() {
     loadInitialData();
   }, [loadInitialData]);
 
-    // Refresh every 60 seconds for live data (less aggressive to prevent disruption)
+    // Refresh every 30 seconds for live data (more aggressive for real-time feel)
     useEffect(() => {
       const interval = setInterval(() => {
         loadInitialData();
-      }, 60000);
+      }, 30000);
       return () => clearInterval(interval);
     }, [loadInitialData]);
 
@@ -299,7 +299,7 @@ export function useTokenSearch(query: string) {
       }
     };
 
-    const debounce = setTimeout(search, 300);
+    const debounce = setTimeout(search, 200);
     return () => clearTimeout(debounce);
   }, [query]);
 

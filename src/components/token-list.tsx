@@ -11,7 +11,7 @@ import { useTokenSearch } from "@/hooks/use-token-data";
 type FilterType = "all" | "trending" | "new" | "gainers";
 
 export function TokenList() {
-  const { tokens, setSelectedToken, selectedToken, loading, loadingMore, hasMore, loadMore } = useApp();
+  const { tokens, setSelectedToken, selectedToken, loading, loadingMore, hasMore, loadMore, prefetchSecurity } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const { results: searchResults, loading: searchLoading } = useTokenSearch(searchQuery);
@@ -121,15 +121,17 @@ export function TokenList() {
             <p className="text-sm">No tokens found</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#1a1a1a]/50">
-            {displayTokens.map((token) => (
-              <TokenRow
-                key={token.address}
-                token={token}
-                isSelected={selectedToken?.address === token.address}
-                onClick={() => setSelectedToken(token)}
-              />
-            ))}
+            <div className="divide-y divide-[#1a1a1a]/50">
+              {displayTokens.map((token) => (
+                <TokenRow
+                  key={token.address}
+                  token={token}
+                  isSelected={selectedToken?.address === token.address}
+                  onClick={() => setSelectedToken(token)}
+                  onMouseEnter={() => prefetchSecurity(token.address)}
+                />
+              ))}
+
             
             {hasMore && !searchQuery && (
               <div ref={observerTarget} className="p-6 flex justify-center">
@@ -143,12 +145,23 @@ export function TokenList() {
   );
 }
 
-function TokenRow({ token, isSelected, onClick }: { token: Token; isSelected: boolean; onClick: () => void }) {
+function TokenRow({ 
+  token, 
+  isSelected, 
+  onClick, 
+  onMouseEnter 
+}: { 
+  token: Token; 
+  isSelected: boolean; 
+  onClick: () => void; 
+  onMouseEnter: () => void;
+}) {
   const isPositive = token.priceChange24h >= 0;
 
   return (
     <div
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       className={cn(
         "px-3 sm:px-4 py-3 sm:py-3.5 cursor-pointer transition-all active:bg-[#1a1a1a]",
         "hover:bg-[#111] border-l-2",

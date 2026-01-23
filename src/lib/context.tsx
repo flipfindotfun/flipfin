@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import { Token, Position, Trade, SmartWallet, WalletState } from "@/lib/types";
 import { useTokenData } from "@/hooks/use-token-data";
 
@@ -23,6 +23,7 @@ interface AppContextType {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   solPrice: number;
+  prefetchSecurity: (address: string) => void;
 }
 
 interface AppSettings {
@@ -64,6 +65,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [smartWallets, setSmartWallets] = useState<SmartWallet[]>([]);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [solPrice, setSolPrice] = useState(0);
+  const securityCache = useRef<Map<string, any>>(new Map());
+
+  // Prefetch security data
+  const prefetchSecurity = useCallback(async (address: string) => {
+    if (securityCache.current.has(address)) return;
+    
+    // Mark as fetching to avoid duplicate calls
+    securityCache.current.set(address, { loading: true });
+    
+    try {
+      const response = await fetch(`/api/token/security?address=${address}`);
+      const data = await response.json();
+      if (data.success) {
+        securityCache.current.set(address, data.security);
+        
+        // If this token is currently selected, update it immediately
+        setSelectedToken(prev => 
+          prev && prev.address === address ? { ...prev, security: data.security } : prev
+        );
+      }
+    } catch (err) {
+      console.error("Error prefetching security:", err);
+      securityCache.current.delete(address);
+    }
+  }, []);
 
   // Sync tokens from hook to local state if needed or just use hook directly
   useEffect(() => {
@@ -108,20 +134,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (selectedToken && !selectedToken.security) {
-      const fetchSecurity = async () => {
-        try {
-          const response = await fetch(`/api/token/security?address=${selectedToken.address}`);
-          const data = await response.json();
-          if (data.success) {
-            setSelectedToken(prev => prev && prev.address === selectedToken.address ? { ...prev, security: data.security } : prev);
-          }
-        } catch (err) {
-          console.error("Error fetching security:", err);
-        }
-      };
-      fetchSecurity();
+      // Check cache first
+      const cached = securityCache.current.get(selectedToken.address);
+      if (cached && !cached.loading) {
+        setSelectedToken(prev => prev ? { ...prev, security: cached } : null);
+        return;
+      }
+      
+      // If not in cache or still loading, the fetch logic in prefetchSecurity 
+      // will handle updating the selected token when it finishes.
+      // If it's not even in cache, start prefetching now.
+      if (!cached) {
+        prefetchSecurity(selectedToken.address);
+      }
     }
-  }, [selectedToken?.address]);
+  }, [selectedToken?.address, prefetchSecurity]);
 
   return (
     <AppContext.Provider
@@ -144,6 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         hasMore,
         loadMore,
         solPrice,
+        prefetchSecurity,
       }}
     >
       {children}

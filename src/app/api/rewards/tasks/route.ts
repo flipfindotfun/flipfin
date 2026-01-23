@@ -27,7 +27,7 @@ const TASKS = [
       {
         id: "yapping_post",
         title: "Yapping System",
-        description: "Post about Flip tagging @flipfinfun on X",
+        description: "Post about Flip tagging @flipfindotfun on X",
         points: 0, // Points are awarded per post based on quality
         type: "recurring",
       },

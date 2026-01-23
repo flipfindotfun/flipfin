@@ -493,7 +493,7 @@ export default function RewardsPage() {
                   <h3 className="text-xl font-black text-white italic">POST & EARN REWARDS</h3>
                   <p className="text-sm text-gray-400 max-w-md">
                     Post about your wins or thoughts on <span className="text-[#02c076] font-bold">Flip Finance</span>. 
-                    Tag <span className="text-white font-bold">@flipfinfun</span> and get points based on post quality!
+                    Tag <span className="text-white font-bold">@flipfindotfun</span> and get points based on post quality!
                   </p>
                   
                   {/* Sample Post */}
@@ -505,7 +505,7 @@ export default function RewardsPage() {
                       <span className="text-[10px] font-bold text-gray-400">Sample Post</span>
                     </div>
                     <p className="text-[11px] text-gray-300 italic">
-                      "Just made 5 SOL on $BONK using @flipfinfun! The fastest sniper in the game. 🚀💨 #Solana #FlipFin"
+                      "Just made 5 SOL on $BONK using @flipfindotfun! The fastest sniper in the game. 🚀💨 #Solana #FlipFin"
                     </p>
                   </div>
 
@@ -525,7 +525,7 @@ export default function RewardsPage() {
               <div className="flex flex-col gap-2 w-full md:w-auto">
                 <Button 
                   disabled={!xHandle}
-                  onClick={() => window.open(`https://x.com/intent/tweet?text=I'm trading on @flipfinfun - the fastest Solana sniper! 🚀`, '_blank')}
+                  onClick={() => window.open(`https://x.com/intent/tweet?text=I'm trading on @flipfindotfun - the fastest Solana sniper! 🚀`, '_blank')}
                   className={cn(
                     "font-black italic uppercase px-8 group-hover:scale-105 transition-transform",
                     xHandle ? "bg-white hover:bg-gray-200 text-black" : "bg-gray-800 text-gray-500 cursor-not-allowed"

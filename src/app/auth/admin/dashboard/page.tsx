@@ -47,6 +47,18 @@ interface DashboardData {
   }>;
 }
 
+interface FeaturedToken {
+  id: string;
+  token_address: string;
+  symbol: string;
+  name: string;
+  logo_url: string;
+  featured_until: string;
+  created_at: string;
+  status: "active" | "queued" | "expired";
+  duration_hours: number;
+}
+
 interface APIHealth {
   name: string;
   endpoint: string;
@@ -90,7 +102,7 @@ interface FeeData {
   };
 }
 
-type TabType = "overview" | "health" | "logs" | "fees";
+type TabType = "overview" | "health" | "logs" | "fees" | "featured";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -101,12 +113,19 @@ export default function AdminDashboardPage() {
   const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [feeData, setFeeData] = useState<FeeData | null>(null);
+  const [featuredTokens, setFeaturedTokens] = useState<FeaturedToken[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [logFilter, setLogFilter] = useState("all");
   const [ataInput, setAtaInput] = useState("");
   const [ataResult, setAtaResult] = useState<{ ata: string; exists: boolean; balance: string; transaction?: string } | null>(null);
   const [ataLoading, setAtaLoading] = useState(false);
   const [ataError, setAtaError] = useState("");
+
+  const [featuredInput, setFeaturedInput] = useState({
+    address: "",
+    duration: "12"
+  });
+  const [featuredLoading, setFeaturedLoading] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -118,8 +137,85 @@ export default function AdminDashboardPage() {
       if (activeTab === "health") fetchHealth();
       if (activeTab === "logs") fetchLogs();
       if (activeTab === "fees") fetchFees();
+      if (activeTab === "featured") fetchFeaturedTokens();
     }
   }, [activeTab, admin]);
+
+  const fetchFeaturedTokens = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/featured?admin=true");
+      if (res.ok) setFeaturedTokens(await res.json());
+    } catch (err) {
+      console.error("Featured error:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const addFeaturedToken = async (status: "active" | "queued" = "active") => {
+    if (!featuredInput.address) return;
+    setFeaturedLoading(true);
+    try {
+      // First get token info from DexScreener
+      const dexRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${featuredInput.address}`);
+      const pairs = await dexRes.json();
+      
+      if (!Array.isArray(pairs) || pairs.length === 0) {
+        alert("Token not found on DexScreener");
+        return;
+      }
+      
+      const pair = pairs[0];
+      const res = await fetch("/api/featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token_address: featuredInput.address,
+          symbol: pair.baseToken.symbol,
+          name: pair.baseToken.name,
+          logo_url: pair.info?.imageUrl,
+          duration_hours: parseInt(featuredInput.duration),
+          status
+        })
+      });
+
+      if (res.ok) {
+        setFeaturedInput({ address: "", duration: "12" });
+        fetchFeaturedTokens();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to add featured token");
+      }
+    } catch (err) {
+      console.error("Add featured error:", err);
+    } finally {
+      setFeaturedLoading(false);
+    }
+  };
+
+  const updateFeaturedTokenStatus = async (id: string, action: "activate" | "deactivate") => {
+    try {
+      const res = await fetch("/api/featured", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action })
+      });
+      if (res.ok) fetchFeaturedTokens();
+    } catch (err) {
+      console.error("Update featured status error:", err);
+    }
+  };
+
+  const deleteFeaturedToken = async (id: string) => {
+    if (!confirm("Remove this featured token?")) return;
+    try {
+      const res = await fetch(`/api/featured?id=${id}`, { method: "DELETE" });
+      if (res.ok) fetchFeaturedTokens();
+    } catch (err) {
+      console.error("Delete featured error:", err);
+    }
+  };
 
   const checkAuth = async () => {
     try {
@@ -263,6 +359,7 @@ export default function AdminDashboardPage() {
     { id: "health", label: "API Health", icon: Server },
     { id: "logs", label: "Console", icon: Terminal },
     { id: "fees", label: "Fees", icon: Coins },
+    { id: "featured", label: "Featured", icon: Crown },
   ];
 
   return (
@@ -651,9 +748,215 @@ export default function AdminDashboardPage() {
                   </table>
                 </div>
               </div>
-          </div>
-        )}
-      </main>
+            </div>
+          )}
+
+          {activeTab === "featured" && (
+            <div className="space-y-6">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  <h2 className="text-lg font-bold text-white">Manage Featured Tokens</h2>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">Token Address (Solana)</label>
+                    <input
+                      type="text"
+                      value={featuredInput.address}
+                      onChange={(e) => setFeaturedInput({ ...featuredInput, address: e.target.value })}
+                      placeholder="Enter token mint address"
+                      className="w-full bg-[#1e2329] border border-[#2a3139] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#02c076]"
+                    />
+                  </div>
+                  <div className="w-full md:w-32">
+                    <label className="block text-xs text-gray-500 mb-1">Duration (Hours)</label>
+                    <select
+                      value={featuredInput.duration}
+                      onChange={(e) => setFeaturedInput({ ...featuredInput, duration: e.target.value })}
+                      className="w-full bg-[#1e2329] border border-[#2a3139] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#02c076]"
+                    >
+                      <option value="1">1 Hour</option>
+                      <option value="6">6 Hours</option>
+                      <option value="12">12 Hours</option>
+                      <option value="24">24 Hours</option>
+                      <option value="168">7 Days</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      onClick={() => addFeaturedToken("active")}
+                      disabled={featuredLoading || !featuredInput.address}
+                      className="flex-1 md:w-auto px-6 py-3 bg-[#02c076] text-black font-bold rounded-lg hover:bg-[#02a566] disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {featuredLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Feature Now
+                    </button>
+                    <button
+                      onClick={() => addFeaturedToken("queued")}
+                      disabled={featuredLoading || !featuredInput.address}
+                      className="flex-1 md:w-auto px-6 py-3 bg-[#1e2329] text-[#02c076] font-bold rounded-lg border border-[#02c076]/30 hover:bg-[#02c076]/10 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {featuredLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                      Add to Queue
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Tokens */}
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329]">
+                <div className="p-4 border-b border-[#1e2329] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-green-400" />
+                    <h2 className="text-lg font-bold text-white">Active Featured</h2>
+                  </div>
+                  <p className="text-xs text-gray-500">{featuredTokens.filter(t => t.status === "active").length} active</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-[#1e2329]">
+                        <th className="text-left p-4 font-medium">Token</th>
+                        <th className="text-left p-4 font-medium">Address</th>
+                        <th className="text-left p-4 font-medium">Featured Until</th>
+                        <th className="text-right p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {featuredTokens.filter(t => t.status === "active").length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-gray-500">No active featured tokens</td></tr>
+                      ) : featuredTokens.filter(t => t.status === "active").map((token) => (
+                        <tr key={token.id} className="border-b border-[#1e2329] hover:bg-[#1e2329]/50">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              {token.logo_url ? (
+                                <img src={token.logo_url} alt={token.symbol} className="w-8 h-8 rounded-full" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#02c076] flex items-center justify-center text-[10px] font-bold text-black">
+                                  {token.symbol.slice(0, 2)}
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-white text-sm">{token.symbol}</p>
+                                <p className="text-xs text-gray-500">{token.name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-gray-400">{formatWallet(token.token_address)}</span>
+                              <button onClick={() => navigator.clipboard.writeText(token.token_address)} className="text-gray-600 hover:text-[#02c076]">
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-gray-300">
+                            {formatDate(token.featured_until)}
+                            <p className="text-[10px] text-gray-500">
+                              Expires in {Math.max(0, Math.round((new Date(token.featured_until).getTime() - Date.now()) / 3600000))} hours
+                            </p>
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => updateFeaturedTokenStatus(token.id, "deactivate")}
+                                className="p-2 text-gray-500 hover:text-yellow-400 transition-colors"
+                                title="Expire Now"
+                              >
+                                <Clock className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteFeaturedToken(token.id)}
+                                className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Queued Tokens */}
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329]">
+                <div className="p-4 border-b border-[#1e2329] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <h2 className="text-lg font-bold text-white">Featured Queue</h2>
+                  </div>
+                  <p className="text-xs text-gray-500">{featuredTokens.filter(t => t.status === "queued").length} queued</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b border-[#1e2329]">
+                        <th className="text-left p-4 font-medium">Token</th>
+                        <th className="text-left p-4 font-medium">Address</th>
+                        <th className="text-left p-4 font-medium">Duration</th>
+                        <th className="text-right p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {featuredTokens.filter(t => t.status === "queued").length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-gray-500">No queued tokens</td></tr>
+                      ) : featuredTokens.filter(t => t.status === "queued").map((token) => (
+                        <tr key={token.id} className="border-b border-[#1e2329] hover:bg-[#1e2329]/50">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              {token.logo_url ? (
+                                <img src={token.logo_url} alt={token.symbol} className="w-8 h-8 rounded-full" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#02c076] flex items-center justify-center text-[10px] font-bold text-black">
+                                  {token.symbol.slice(0, 2)}
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-white text-sm">{token.symbol}</p>
+                                <p className="text-xs text-gray-500">{token.name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-gray-400">{formatWallet(token.token_address)}</span>
+                              <button onClick={() => navigator.clipboard.writeText(token.token_address)} className="text-gray-600 hover:text-[#02c076]">
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-gray-300">
+                            {token.duration_hours} Hours
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => updateFeaturedTokenStatus(token.id, "activate")}
+                                className="px-3 py-1 bg-[#02c076]/10 text-[#02c076] text-xs font-bold rounded border border-[#02c076]/20 hover:bg-[#02c076]/20 transition-colors"
+                              >
+                                Activate
+                              </button>
+                              <button
+                                onClick={() => deleteFeaturedToken(token.id)}
+                                className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
     </div>
   );
 }

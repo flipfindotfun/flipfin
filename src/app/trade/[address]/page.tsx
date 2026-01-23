@@ -62,6 +62,64 @@ export default function TradePage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [tokenBanner, setTokenBanner] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>("chartTrade");
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  const checkFavorite = useCallback(async () => {
+    if (!publicKey || !address) return;
+    try {
+      const { data, error } = await supabase
+        .from("favorites")
+        .select("*")
+        .eq("wallet_address", publicKey)
+        .eq("token_address", address)
+        .maybeSingle();
+      
+      if (data) setIsFavorited(true);
+      else setIsFavorited(false);
+    } catch (e) {
+      console.error("Error checking favorite:", e);
+    }
+  }, [publicKey, address]);
+
+  const toggleFavorite = async () => {
+    if (!publicKey || !token) {
+      toast.error("Connect wallet to use watchlist");
+      return;
+    }
+
+    try {
+      if (isFavorited) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("wallet_address", publicKey)
+          .eq("token_address", address);
+        
+        if (!error) {
+          setIsFavorited(false);
+          toast.success("Removed from watchlist");
+        }
+      } else {
+        const { error } = await supabase
+          .from("favorites")
+          .insert({
+            wallet_address: publicKey,
+            token_address: address,
+            symbol: token.symbol,
+            name: token.name,
+            image_url: token.logoURI,
+          });
+        
+        if (!error) {
+          setIsFavorited(true);
+          toast.success("Added to watchlist");
+        }
+      }
+    } catch (e) {
+      console.error("Error toggling favorite:", e);
+      toast.error("Failed to update watchlist");
+    }
+  };
 
   const fetchToken = useCallback(async (isRefresh = false) => {
     if (!isRefresh && fetchedRef.current) return;
@@ -72,6 +130,7 @@ export default function TradePage() {
     if (existing && !isRefresh) {
       setToken(existing);
       setLoading(false);
+      checkFavorite();
       return;
     }
 
@@ -114,12 +173,13 @@ export default function TradePage() {
           buys24h: mainPair.txns?.h24?.buys || 0,
           sells24h: mainPair.txns?.h24?.sells || 0,
         });
+        checkFavorite();
       }
     } catch (e) {
       console.error(e);
     }
     setLoading(false);
-  }, [address, tokens]);
+  }, [address, tokens, checkFavorite]);
 
     const fetchTrades = useCallback(async (silent = false) => {
       if (!address) return;
@@ -512,9 +572,15 @@ export default function TradePage() {
               <Globe className="w-3.5 h-3.5" />
             </a>
           )}
-          <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-yellow-500">
-            <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          </button>
+            <button 
+              onClick={toggleFavorite}
+              className={cn(
+                "p-1 hover:bg-[#1e2329] rounded transition-colors",
+                isFavorited ? "text-yellow-500" : "text-gray-500 hover:text-yellow-500"
+              )}
+            >
+              <Star className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", isFavorited && "fill-current")} />
+            </button>
           <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
             <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
