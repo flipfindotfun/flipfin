@@ -20,7 +20,12 @@ import {
   ChevronRight,
   ExternalLink,
   RefreshCw,
-  X
+  X,
+  User,
+  Activity,
+  BarChart3,
+  DollarSign,
+  PieChart
 } from "lucide-react";
 import { useWallet } from "@/lib/wallet-context";
 import { cn } from "@/lib/utils";
@@ -33,6 +38,8 @@ interface TrackedWallet {
   tracked_wallet: string;
   label: string | null;
   is_copy_trading: boolean;
+  insta_buy_enabled: boolean;
+  insta_buy_amount: number;
   created_at: string;
   recentActivity: {
     signature: string;
@@ -43,6 +50,16 @@ interface TrackedWallet {
     tokenImage?: string;
     tokenAmount: number;
   }[];
+}
+
+interface WalletStats {
+  winRate: number;
+  totalPnlUsd: number;
+  realizedPnlUsd: number;
+  unrealizedPnlUsd: number;
+  totalTrades: number;
+  winCount: number;
+  lossCount: number;
 }
 
 interface CopyTradeSettings {
@@ -67,6 +84,7 @@ export default function TrackerPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState<TrackedWallet | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!publicKey) return;
@@ -192,6 +210,7 @@ export default function TrackerPage() {
                 index={idx}
                 onDelete={() => handleDelete(wallet.tracked_wallet)}
                 onToggleCopy={() => handleToggleCopy(wallet)}
+                onViewProfile={() => setViewingProfile(wallet)}
               />
             ))}
           </div>
@@ -212,6 +231,13 @@ export default function TrackerPage() {
             onSave={handleSaveSettings}
           />
         )}
+        {viewingProfile && (
+          <WalletProfileModal
+            wallet={viewingProfile}
+            onClose={() => setViewingProfile(null)}
+            onSave={handleUpdateWallet}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -225,13 +251,36 @@ export default function TrackerPage() {
           userWallet: publicKey,
           trackedWallet: address,
           label,
-          isCopyTrading: copyTrade
+          isCopyTrading: copyTrade,
+          instaBuyEnabled: false,
+          instaBuyAmount: 0.1
         })
       });
       fetchData();
       setShowAddModal(false);
     } catch (err) {
       console.error("Error adding wallet:", err);
+    }
+  }
+
+  async function handleUpdateWallet(wallet: TrackedWallet) {
+    try {
+      await fetch("/api/tracker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userWallet: publicKey,
+          trackedWallet: wallet.tracked_wallet,
+          label: wallet.label,
+          isCopyTrading: wallet.is_copy_trading,
+          instaBuyEnabled: wallet.insta_buy_enabled,
+          instaBuyAmount: wallet.insta_buy_amount
+        })
+      });
+      setWallets(w => w.map(x => x.id === wallet.id ? wallet : x));
+      setViewingProfile(null);
+    } catch (err) {
+      console.error("Error updating wallet:", err);
     }
   }
 
@@ -288,12 +337,14 @@ function WalletCard({
   wallet, 
   index,
   onDelete,
-  onToggleCopy
+  onToggleCopy,
+  onViewProfile
 }: { 
   wallet: TrackedWallet;
   index: number;
   onDelete: () => void;
   onToggleCopy: () => void;
+  onViewProfile: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const shortAddr = `${wallet.tracked_wallet.slice(0, 6)}...${wallet.tracked_wallet.slice(-4)}`;
@@ -309,27 +360,38 @@ function WalletCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-[#0d1117] border border-[#1e2329] rounded-xl overflow-hidden"
+      className="bg-[#0d1117] border border-[#1e2329] rounded-xl overflow-hidden group cursor-pointer"
+      onClick={onViewProfile}
     >
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-purple-400" />
+              <User className="w-5 h-5 text-purple-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white">
+                <span className="font-bold text-white group-hover:text-[#02c076] transition-colors">
                   {wallet.label || shortAddr}
                 </span>
-                {wallet.is_copy_trading && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-400 font-medium">
-                    COPY
-                  </span>
-                )}
+                <div className="flex gap-1">
+                  {wallet.is_copy_trading && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-400 font-medium">
+                      COPY
+                    </span>
+                  )}
+                  {wallet.insta_buy_enabled && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] bg-blue-500/20 text-blue-400 font-medium uppercase">
+                      Insta: {wallet.insta_buy_amount} SOL
+                    </span>
+                  )}
+                </div>
               </div>
               <button
-                onClick={copyAddress}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyAddress();
+                }}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300"
               >
                 {shortAddr}
@@ -337,7 +399,7 @@ function WalletCard({
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
             <button
               onClick={onToggleCopy}
               className={cn(
@@ -369,42 +431,408 @@ function WalletCard({
 
         {wallet.recentActivity && wallet.recentActivity.length > 0 && (
           <div className="border-t border-[#1e2329] pt-3 mt-3">
-            <p className="text-[10px] text-gray-500 uppercase font-medium mb-2">Recent Activity</p>
-            <div className="space-y-1.5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] text-gray-500 uppercase font-medium">Trade History</p>
+              <span className="text-[10px] text-gray-600">{wallet.recentActivity.length} Swaps</span>
+            </div>
+            <div className="space-y-2">
               {wallet.recentActivity.slice(0, 3).map((activity) => (
-                <div key={activity.signature} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                <div key={activity.signature} className="flex items-center justify-between p-2 rounded-lg bg-[#161a1f] group/item hover:bg-[#1e2329] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                       activity.type === "buy" 
-                        ? "bg-emerald-500/20 text-emerald-400" 
-                        : "bg-red-500/20 text-red-400"
+                        ? "bg-emerald-500/10 text-emerald-400" 
+                        : "bg-red-500/10 text-red-400"
                     )}>
-                      {activity.type.toUpperCase()}
-                    </span>
-                    {activity.tokenImage && (
-                      <img 
-                        src={activity.tokenImage} 
-                        alt={activity.tokenSymbol}
-                        className="w-4 h-4 rounded-full"
-                      />
-                    )}
-                    <Link
-                      href={`/trade/${activity.tokenMint}`}
-                      className="text-xs text-white hover:text-[#02c076] font-medium"
-                    >
-                      {activity.tokenSymbol}
-                    </Link>
+                      {activity.type === "buy" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-white font-bold">
+                          {activity.tokenSymbol}
+                        </span>
+                        {activity.tokenImage && (
+                          <img 
+                            src={activity.tokenImage} 
+                            alt={activity.tokenSymbol}
+                            className="w-3.5 h-3.5 rounded-full"
+                          />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={cn(
+                          "text-[10px] font-medium",
+                          activity.type === "buy" ? "text-emerald-500" : "text-red-500"
+                        )}>
+                          {activity.type.toUpperCase()}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          {formatNumber(activity.tokenAmount)} {activity.tokenSymbol}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-gray-500">
-                    {timeAgo(activity.timestamp)}
-                  </span>
+                  <div className="text-right">
+                    <div className="text-[10px] text-white font-medium">
+                      {timeAgo(activity.timestamp)}
+                    </div>
+                  </div>
                 </div>
               ))}
+              {wallet.recentActivity.length > 3 && (
+                <p className="text-[10px] text-center text-gray-600 font-medium py-1">
+                  + {wallet.recentActivity.length - 3} more trades in profile
+                </p>
+              )}
             </div>
           </div>
         )}
       </div>
+    </motion.div>
+  );
+}
+
+function WalletProfileModal({
+  wallet,
+  onClose,
+  onSave
+}: {
+  wallet: TrackedWallet;
+  onClose: () => void;
+  onSave: (wallet: TrackedWallet) => void;
+}) {
+  const [stats, setStats] = useState<WalletStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"trades" | "stats" | "settings">("trades");
+  
+  // Settings state
+  const [label, setLabel] = useState(wallet.label || "");
+  const [copyTrade, setCopyTrade] = useState(wallet.is_copy_trading);
+  const [instaBuy, setInstaBuy] = useState(wallet.insta_buy_enabled);
+  const [instaAmount, setInstaAmount] = useState(wallet.insta_buy_amount || 0.1);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch(`/api/tracker/profile?wallet=${wallet.tracked_wallet}`);
+        const data = await res.json();
+        setStats(data.stats);
+      } catch (err) {
+        console.error("Error fetching profile stats:", err);
+      }
+      setLoading(false);
+    }
+    fetchProfile();
+  }, [wallet.tracked_wallet]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({
+      ...wallet,
+      label,
+      is_copy_trading: copyTrade,
+      insta_buy_enabled: instaBuy,
+      insta_buy_amount: instaAmount
+    });
+    setSaving(false);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[#0d1117] border border-[#1e2329] rounded-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-[#1e2329] bg-gradient-to-br from-[#1e2329]/50 to-transparent">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-white/5 shadow-2xl">
+                <User className="w-8 h-8 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">
+                  {wallet.label || "Smart Wallet"}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono text-gray-500">
+                    {wallet.tracked_wallet.slice(0, 8)}...{wallet.tracked_wallet.slice(-8)}
+                  </span>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(wallet.tracked_wallet)}
+                    className="p-1 hover:bg-[#1e2329] rounded text-gray-600 hover:text-white transition-colors"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-[#1e2329] rounded-xl transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4 mt-8">
+            <button 
+              onClick={() => setActiveTab("trades")}
+              className={cn(
+                "pb-2 text-sm font-bold transition-colors relative",
+                activeTab === "trades" ? "text-white" : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              Trades
+              {activeTab === "trades" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#02c076]" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab("stats")}
+              className={cn(
+                "pb-2 text-sm font-bold transition-colors relative",
+                activeTab === "stats" ? "text-white" : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              Win Rate & PnL
+              {activeTab === "stats" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#02c076]" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab("settings")}
+              className={cn(
+                "pb-2 text-sm font-bold transition-colors relative",
+                activeTab === "settings" ? "text-white" : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              Settings
+              {activeTab === "settings" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#02c076]" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === "trades" && (
+            <div className="space-y-3">
+              {wallet.recentActivity && wallet.recentActivity.length > 0 ? (
+                wallet.recentActivity.map((activity) => (
+                  <div key={activity.signature} className="flex items-center justify-between p-4 rounded-xl bg-[#1e2329]/50 border border-[#2b3139] hover:bg-[#1e2329] transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                        activity.type === "buy" 
+                          ? "bg-emerald-500/10 text-emerald-400" 
+                          : "bg-red-500/10 text-red-400"
+                      )}>
+                        {activity.type === "buy" ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-white font-bold">{activity.tokenSymbol}</span>
+                          {activity.tokenImage && (
+                            <img src={activity.tokenImage} alt={activity.tokenSymbol} className="w-4 h-4 rounded-full" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={cn(
+                            "text-xs font-bold px-1.5 py-0.5 rounded",
+                            activity.type === "buy" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                          )}>
+                            {activity.type.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatNumber(activity.tokenAmount)} {activity.tokenSymbol}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-white font-medium">{timeAgo(activity.timestamp)}</div>
+                      <a 
+                        href={`https://solscan.io/tx/${activity.signature}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-[#02c076] inline-flex items-center gap-1 mt-1"
+                      >
+                        View Tx <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center opacity-50">
+                  <Activity className="w-12 h-12 mb-4" />
+                  <p>No recent trades found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "stats" && (
+            <div className="space-y-6">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#02c076]" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-6 rounded-2xl bg-[#1e2329]/50 border border-[#2b3139]">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <BarChart3 className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <span className="text-sm text-gray-400">Win Rate</span>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <span className="text-3xl font-bold text-white">{(stats?.winRate || 0).toFixed(1)}%</span>
+                        <span className="text-xs text-gray-500 mb-1">avg</span>
+                      </div>
+                      <div className="mt-4 flex gap-1 h-1.5 rounded-full overflow-hidden bg-[#2b3139]">
+                        <div className="bg-emerald-500" style={{ width: `${stats?.winRate}%` }} />
+                        <div className="bg-red-500" style={{ width: `${100 - (stats?.winRate || 0)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-[#1e2329]/50 border border-[#2b3139]">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                          <DollarSign className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <span className="text-sm text-gray-400">Total PnL</span>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <span className={cn(
+                          "text-3xl font-bold",
+                          (stats?.totalPnlUsd || 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                        )}>
+                          ${formatNumber(Math.abs(stats?.totalPnlUsd || 0))}
+                        </span>
+                        <span className="text-xs text-gray-500 mb-1">USD</span>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between text-[10px] text-gray-500 font-bold uppercase">
+                        <span>Realized: ${formatNumber(stats?.realizedPnlUsd || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-[#1e2329]/50 border border-[#2b3139]">
+                    <h3 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
+                      <PieChart className="w-4 h-4 text-purple-400" />
+                      Performance Breakdown
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Total Trades</span>
+                        <span className="text-white font-bold">{stats?.totalTrades}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Wins</span>
+                        <span className="text-emerald-400 font-bold">{stats?.winCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Losses</span>
+                        <span className="text-red-400 font-bold">{stats?.lossCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Unrealized Profit</span>
+                        <span className={cn(
+                          "font-bold",
+                          (stats?.unrealizedPnlUsd || 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                        )}>
+                          ${formatNumber(stats?.unrealizedPnlUsd || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === "settings" && (
+            <div className="space-y-6">
+              <div>
+                <label className="text-xs text-gray-400 block mb-2 font-bold uppercase">Label</label>
+                <input
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="Enter wallet label"
+                  className="w-full px-4 py-3 bg-[#1e2329] border border-[#2b3139] rounded-xl text-white text-sm focus:outline-none focus:border-[#02c076]"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <ToggleSetting
+                  label="Copy Trading"
+                  description="Automatically copy all trades from this wallet"
+                  value={copyTrade}
+                  onChange={setCopyTrade}
+                />
+
+                <ToggleSetting
+                  label="Insta-Buy"
+                  description="Auto-buy new tokens as soon as they buy them"
+                  value={instaBuy}
+                  onChange={setInstaBuy}
+                />
+
+                {instaBuy && (
+                  <div className="p-4 rounded-xl bg-[#1e2329] border border-[#2b3139] shadow-inner">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-bold text-white">Insta-Buy Amount</span>
+                      <span className="text-sm font-bold text-[#02c076]">{instaAmount} SOL</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {[0.1, 0.25, 0.5, 1.0].map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() => setInstaAmount(amt)}
+                          className={cn(
+                            "py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                            instaAmount === amt 
+                              ? "bg-[#02c076] border-[#02c076] text-black" 
+                              : "bg-[#2b3139] border-[#3b4149] text-gray-400 hover:border-gray-500"
+                          )}
+                        >
+                          {amt}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="range"
+                      min={0.01}
+                      max={5}
+                      step={0.01}
+                      value={instaAmount}
+                      onChange={(e) => setInstaAmount(parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-[#2b3139] rounded-lg appearance-none cursor-pointer accent-[#02c076]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full py-4 bg-gradient-to-r from-[#02c076] to-[#02a566] text-black font-bold rounded-xl shadow-lg shadow-[#02c076]/10"
+              >
+                {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Save Profile Settings"}
+              </motion.button>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

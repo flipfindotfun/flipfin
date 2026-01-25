@@ -1,59 +1,78 @@
-# Flipfin.fun - Professional Solana Sniper & Trading Platform
+# Flipfin.fun - Professional Solana Sniper & Trading Terminal
 
-Flipfin is a high-performance trading platform and sniper bot for the Solana blockchain, designed for professional traders who demand real-time accuracy and advanced analytics.
+Flipfin.fun is a high-performance, institutional-grade trading platform and sniper bot built specifically for the Solana blockchain. Designed for professional traders and alpha seekers, Flipfin combines real-time data accuracy with lightning-fast execution and advanced analytics.
 
 ## 🚀 Key Features
 
-- **Professional Charting**: Integrated DexScreener and high-performance Pro Charts with custom buy/sell markers.
-- **Advanced Analytics**: Real-time token security analysis, holder distribution, and narrative tracking.
-- **High-Speed Swaps**: Powered by Jupiter SDK for the best prices and lightning-fast execution on Solana.
-- **Copy Trading**: Follow top traders and automate your strategies with precision.
-- **User Dashboard**: Comprehensive portfolio tracking, PnL analysis, and trading history.
-- **Rewards System**: Earn points through trading activity and platform engagement.
+### ⚡ Professional Trading Terminal
+- **Jupiter-Powered Swaps**: Access the deepest liquidity and best prices on Solana with sub-second execution.
+- **Advanced Charting**: Fully integrated DxCharts and DexScreener charts with custom indicators and buy/sell markers.
+- **Priority Fees**: Customizable slippage and priority fee settings to win every trade.
+
+### 📊 Institutional Analytics
+- **Real-Time OHLCV**: High-fidelity price data powered by Birdeye and DexScreener.
+- **Token Security Scan**: Instant RugCheck-style security analysis (Mint, Freeze, LP Burned, etc.).
+- **Holder Distribution**: Detailed analysis of top holders and potential "bubble" maps.
+- **Smart Money Tracking**: Monitor whale movements and trending narratives in real-time.
+
+### 🤖 Advanced Automation
+- **Copy Trading**: Seamlessly follow profitable wallets with customizable risk management.
+- **Sniper Bot**: Dedicated bot logic for capturing new launches and migrating tokens.
+- **Portfolio Tracking**: Real-time PnL tracking, balance monitoring, and trade history.
+
+### 💎 Exclusive Perks
+- **Featured Tokens**: Discover hand-picked high-conviction gems on our front page.
+- **X Post Generator**: Professional-grade marketing tools for token creators and admins to generate hype on X.
+- **Points & Rewards**: Gamified trading experience—earn points for every swap and climb the leaderboard.
 
 ## 🛠 Tech Stack
 
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS, Framer Motion
-- **Charting**: DexScreener, @devexperts/dxcharts-lite
-- **Solana Integration**: @solana/web3.js, Jupiter SDK
-- **Backend**: Supabase (Database & Auth), Birdeye API (OHLCV & Analytics)
-- **Styling**: Tailwind CSS with custom design tokens
+- **Blockchain**: @solana/web3.js, Jupiter SDK
+- **Data APIs**: Birdeye (Primary), DexScreener, GeckoTerminal, Helius RPC
+- **Backend**: Supabase (Database, Real-time, Auth)
+- **AI/LLM**: Groq (Market Sentiment & Analysis)
 
 ## 🏁 Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [Bun](https://bun.sh/) or [npm](https://www.npmjs.com/)
-- Solana Wallet (Phantom, Solflare, etc.)
+- Node.js (v18+)
+- Bun (Recommended) or npm/yarn
+- Solana RPC Node (Helius, Alchemy, etc.)
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repo**
    ```bash
-   git clone https://github.com/your-repo/flipfin.git
-   cd flipfin
+   git clone https://github.com/your-username/flipfin-solana-bot.git
+   cd flipfin-solana-bot
    ```
 
-2. Install dependencies:
+2. **Install dependencies**
    ```bash
    bun install
    ```
 
-3. Set up environment variables:
-   Copy `.env.example` to `.env.local` and fill in your API keys (Helius, Jupiter, Birdeye, Supabase, etc.).
+3. **Configure Environment**
+   Create a `.env.local` file with the following:
+   ```env
+   NEXT_PUBLIC_HELIUS_API_KEY=your_key
+   BIRDEYE_API_KEY=your_key
+   NEXT_PUBLIC_SUPABASE_URL=your_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+   ```
 
-4. Run the development server:
+4. **Launch**
    ```bash
    bun dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+## 🛡 Security & Privacy
 
-## 🛡 Security
+Flipfin is built on non-custodial principles. Your private keys never leave your browser for frontend operations, and our backend integrations utilize secure, industry-standard practices for data management.
 
-Flipfin prioritizes user security. Private keys are never stored on our servers and all transactions are signed client-side or through secure non-custodial methods.
+---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Built with ❤️ for the Solana Community.
+[Visit Flipfin.fun](https://flipfin.fun)

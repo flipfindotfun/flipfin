@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Connection, PublicKey } from "@solana/web3.js";
-import { useWallet } from "@/lib/wallet-context";
+import { PublicKey } from "@solana/web3.js";
+import { useWallet, connection, withRetry } from "@/lib/wallet-context";
 
 const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
@@ -38,7 +38,7 @@ export function useTokenPositions() {
       const heliusApiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
       
       if (heliusApiKey) {
-        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`, {
+        const response = await withRetry(() => fetch(`https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -55,7 +55,7 @@ export function useTokenPositions() {
               },
             },
           }),
-        });
+        }));
 
         const data = await response.json();
         
@@ -102,13 +102,10 @@ export function useTokenPositions() {
         }
       }
 
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "https://api.mainnet-beta.solana.com";
-      const connection = new Connection(rpcUrl, "confirmed");
-
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      const tokenAccounts = await withRetry(() => connection.getParsedTokenAccountsByOwner(
         new PublicKey(publicKey),
         { programId: new PublicKey(TOKEN_PROGRAM_ID) }
-      );
+      ));
 
       const nonZeroAccounts = tokenAccounts.value.filter(
         (account) => {
@@ -167,7 +164,11 @@ export function useTokenPositions() {
 
   useEffect(() => {
     if (!publicKey) return;
-    const interval = setInterval(fetchPositions, 30000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchPositions();
+      }
+    }, 120000); // Increased to 120s
     return () => clearInterval(interval);
   }, [publicKey, fetchPositions]);
 
@@ -192,8 +193,8 @@ async function fetchTokenData(mints: string[]): Promise<Map<string, {
         const mintString = batch.join(",");
 
         const [dexRes, jupRes] = await Promise.all([
-          fetch(`https://api.dexscreener.com/tokens/v1/solana/${mintString}`),
-          fetch(`https://api.jup.ag/price/v2?ids=${mintString}`)
+          withRetry(() => fetch(`https://api.dexscreener.com/tokens/v1/solana/${mintString}`)),
+          withRetry(() => fetch(`https://api.jup.ag/price/v2?ids=${mintString}`))
         ]);
 
         const pairs = await dexRes.json();
@@ -251,13 +252,10 @@ export function useTokenPosition(tokenMint: string) {
     setLoading(true);
 
     try {
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "https://api.mainnet-beta.solana.com";
-      const connection = new Connection(rpcUrl, "confirmed");
-
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      const tokenAccounts = await withRetry(() => connection.getParsedTokenAccountsByOwner(
         new PublicKey(publicKey),
         { mint: new PublicKey(tokenMint) }
-      );
+      ));
 
       if (tokenAccounts.value.length === 0) {
         setPosition(null);
@@ -298,7 +296,11 @@ export function useTokenPosition(tokenMint: string) {
 
   useEffect(() => {
     if (!publicKey || !tokenMint) return;
-    const interval = setInterval(fetchPosition, 15000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchPosition();
+      }
+    }, 30000); // Increased to 30s
     return () => clearInterval(interval);
   }, [publicKey, tokenMint, fetchPosition]);
 

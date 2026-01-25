@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { userWallet, trackedWallet, label, isCopyTrading } = body;
+  const { userWallet, trackedWallet, label, isCopyTrading, instaBuyEnabled, instaBuyAmount } = body;
 
   if (!userWallet || !trackedWallet) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       tracked_wallet: trackedWallet,
       label: label || null,
       is_copy_trading: isCopyTrading || false,
+      insta_buy_enabled: instaBuyEnabled || false,
+      insta_buy_amount: instaBuyAmount || 0.1,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_wallet,tracked_wallet" })
     .select()
@@ -117,7 +119,7 @@ async function fetchWalletActivity(wallet: string) {
 
     if (!Array.isArray(data)) return [];
 
-    const activities = data.slice(0, 5).map((tx: any) => {
+    const activities = data.slice(0, 10).map((tx: any) => {
       const tokenTransfer = tx.tokenTransfers?.find((t: any) => 
         t.mint !== "So11111111111111111111111111111111111111112"
       );

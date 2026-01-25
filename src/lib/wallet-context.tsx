@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Keypair, Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { toast } from 'sonner';
@@ -21,33 +21,56 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
+// Singleton connection to avoid multiple instances
+export const connection = new Connection(RPC_URL, {
+  commitment: 'confirmed',
+  confirmTransactionInitialTimeout: 60000,
+});
+
+// Helper for RPC calls with basic retry logic
+export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      if (err.message?.includes('429') || err.toString().includes('429')) {
+        const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<Keypair | null>(null);
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
-    const connection = new Connection(RPC_URL, 'confirmed');
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-    useEffect(() => {
-      setMounted(true);
-    }, []);
+  useEffect(() => {
+    if (!mounted) return;
+    if (wallet) {
+      const pk = wallet.publicKey.toBase58();
+      const ref = typeof window !== 'undefined' ? localStorage.getItem('orchids_ref') : null;
+      
+      fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: pk, referredBy: ref })
+      }).catch(err => console.error('Error registering profile:', err));
+    }
+  }, [wallet, mounted]);
 
-    useEffect(() => {
-      if (!mounted) return;
-      if (wallet) {
-        const pk = wallet.publicKey.toBase58();
-        const ref = typeof window !== 'undefined' ? localStorage.getItem('orchids_ref') : null;
-        
-        fetch('/api/user/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: pk, referredBy: ref })
-        }).catch(err => console.error('Error registering profile:', err));
-      }
-    }, [wallet, mounted]);
-
-    useEffect(() => {
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const storedKey = localStorage.getItem('solana_private_key');
     if (storedKey) {
@@ -63,23 +86,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (wallet) {
-      refreshBalance();
-      const interval = setInterval(refreshBalance, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [wallet]);
-
-  const refreshBalance = async () => {
+  const refreshBalance = useCallback(async () => {
     if (!wallet) return;
     try {
-      const bal = await connection.getBalance(wallet.publicKey);
+      // Only fetch if tab is visible
+      if (document.visibilityState !== 'visible') return;
+      
+      const bal = await withRetry(() => connection.getBalance(wallet.publicKey));
       setBalance(bal / LAMPORTS_PER_SOL);
     } catch (error) {
       console.error('Failed to fetch balance:', error);
     }
-  };
+  }, [wallet]);
+
+  useEffect(() => {
+    if (wallet) {
+      refreshBalance();
+      const interval = setInterval(refreshBalance, 60000); // Increased to 60s
+      return () => clearInterval(interval);
+    }
+  }, [wallet, refreshBalance]);
 
   const generateWallet = () => {
     const newKeypair = Keypair.generate();
