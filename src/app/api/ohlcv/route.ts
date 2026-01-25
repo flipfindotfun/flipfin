@@ -9,8 +9,6 @@ const ohlcvCache = new Map<string, { items: any[]; timestamp: number }>();
 const CACHE_DURATION = 30000;
 
 const TIMEFRAME_SECONDS: { [key: string]: number } = {
-  "1s": 1,
-  "30s": 30,
   "1m": 60,
   "5m": 300,
   "15m": 900,
@@ -22,7 +20,7 @@ const TIMEFRAME_SECONDS: { [key: string]: number } = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
-  const type = searchParams.get("type") || "15m";
+  const type = searchParams.get("type") || "1m";
 
   if (!address) {
     return NextResponse.json({ error: "Token address is required" }, { status: 400 });
@@ -39,9 +37,9 @@ export async function GET(request: Request) {
     });
   }
 
-  const intervalSeconds = TIMEFRAME_SECONDS[type] || 900;
-  const candleCount = type === "1d" ? 30 : type === "4h" ? 42 : type === "1h" ? 48 : type === "1s" ? 120 : type === "30s" ? 120 : 96;
-  const timeFrom = Math.floor(Date.now() / 1000) - intervalSeconds * candleCount;
+    const intervalSeconds = TIMEFRAME_SECONDS[type] || 60;
+    const candleCount = type === "1d" ? 180 : type === "4h" ? 300 : type === "1h" ? 500 : 300;
+    const timeFrom = Math.floor(Date.now() / 1000) - intervalSeconds * candleCount;
   const timeTo = Math.floor(Date.now() / 1000);
 
   if (BIRDEYE_API_KEY) {
@@ -130,8 +128,6 @@ function generateCandlesFromPrice(
   const items = [];
   const now = Math.floor(Date.now() / 1000);
   const intervalMap: { [key: string]: number } = {
-    "1s": 1,
-    "30s": 30,
     "1m": 60,
     "5m": 300,
     "15m": 900,
@@ -139,8 +135,8 @@ function generateCandlesFromPrice(
     "4h": 14400,
     "1d": 86400,
   };
-  const interval = intervalMap[type] || 900;
-  const candleCount = type === "1d" ? 30 : type === "4h" ? 42 : type === "1h" ? 48 : type === "1s" ? 120 : type === "30s" ? 120 : 96;
+  const interval = intervalMap[type] || 60;
+  const candleCount = type === "1d" ? 180 : type === "4h" ? 300 : type === "1h" ? 500 : 300;
 
   // Calculate historical prices from percentage changes
   const price5mAgo = currentPrice / (1 + (changes.m5 || 0) / 100);

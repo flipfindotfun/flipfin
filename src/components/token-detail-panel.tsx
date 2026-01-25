@@ -30,7 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { TradingViewChart } from "@/components/trading-view-chart";
+import { DxChart } from "@/components/dx-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -212,8 +212,9 @@ export function TokenDetailPanel() {
       <div className="flex-1 overflow-y-auto">
         {/* Chart */}
         <div className="h-[200px] sm:h-[280px] lg:h-[320px] border-b border-[#1a1a1a] bg-[#0a0a0a]">
-          <TradingViewChart symbol={selectedToken.symbol} tokenAddress={selectedToken.address} />
+          <DxChart symbol={selectedToken.symbol} tokenAddress={selectedToken.address} marketCap={selectedToken.marketCap} currentPrice={selectedToken.price} />
         </div>
+
 
         {/* Price & Stats */}
         <div className="px-3 sm:px-4 py-3 sm:py-4 border-b border-[#1a1a1a] bg-[#0d0d0d]">

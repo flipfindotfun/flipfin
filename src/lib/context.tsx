@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import { Token, Position, Trade, SmartWallet, WalletState } from "@/lib/types";
 import { useTokenData } from "@/hooks/use-token-data";
 

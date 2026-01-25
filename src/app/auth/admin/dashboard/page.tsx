@@ -25,8 +25,10 @@ import {
   ExternalLink,
   Plus,
   Search,
+  Twitter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { XPostGenerator } from "@/components/admin/x-post-generator";
 
 interface DashboardData {
   stats: {
@@ -116,6 +118,12 @@ export default function AdminDashboardPage() {
   const [featuredTokens, setFeaturedTokens] = useState<FeaturedToken[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [logFilter, setLogFilter] = useState("all");
+  const [selectedTokenForX, setSelectedTokenForX] = useState<{
+    symbol: string;
+    name: string;
+    logo_url: string;
+    address: string;
+  } | null>(null);
   const [ataInput, setAtaInput] = useState("");
   const [ataResult, setAtaResult] = useState<{ ata: string; exists: boolean; balance: string; transaction?: string } | null>(null);
   const [ataLoading, setAtaLoading] = useState(false);
@@ -857,10 +865,22 @@ export default function AdminDashboardPage() {
                               Expires in {Math.max(0, Math.round((new Date(token.featured_until).getTime() - Date.now()) / 3600000))} hours
                             </p>
                           </td>
-                          <td className="p-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => updateFeaturedTokenStatus(token.id, "deactivate")}
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => setSelectedTokenForX({
+                                    symbol: token.symbol,
+                                    name: token.name,
+                                    logo_url: token.logo_url,
+                                    address: token.token_address
+                                  })}
+                                  className="p-2 text-gray-500 hover:text-[#1DA1F2] transition-colors"
+                                  title="Generate X Post"
+                                >
+                                  <Twitter className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => updateFeaturedTokenStatus(token.id, "deactivate")}
                                 className="p-2 text-gray-500 hover:text-yellow-400 transition-colors"
                                 title="Expire Now"
                               >
@@ -957,6 +977,18 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </main>
-    </div>
-  );
-}
+
+        {selectedTokenForX && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+              <XPostGenerator 
+                token={selectedTokenForX} 
+                onClose={() => setSelectedTokenForX(null)} 
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+

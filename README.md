@@ -1,37 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Flipfin.fun - Professional Solana Sniper & Trading Platform
 
-## Getting Started
+Flipfin is a high-performance trading platform and sniper bot for the Solana blockchain, designed for professional traders who demand real-time accuracy and advanced analytics.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Professional Charting**: Integrated DexScreener and high-performance Pro Charts with custom buy/sell markers.
+- **Advanced Analytics**: Real-time token security analysis, holder distribution, and narrative tracking.
+- **High-Speed Swaps**: Powered by Jupiter SDK for the best prices and lightning-fast execution on Solana.
+- **Copy Trading**: Follow top traders and automate your strategies with precision.
+- **User Dashboard**: Comprehensive portfolio tracking, PnL analysis, and trading history.
+- **Rewards System**: Earn points through trading activity and platform engagement.
 
-```
+## 🛠 Tech Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS, Framer Motion
+- **Charting**: DexScreener, @devexperts/dxcharts-lite
+- **Solana Integration**: @solana/web3.js, Jupiter SDK
+- **Backend**: Supabase (Database & Auth), Birdeye API (OHLCV & Analytics)
+- **Styling**: Tailwind CSS with custom design tokens
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏁 Getting Started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
 
-## Learn More
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [Bun](https://bun.sh/) or [npm](https://www.npmjs.com/)
+- Solana Wallet (Phantom, Solflare, etc.)
 
-To learn more about Next.js, take a look at the following resources:
+### Installation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/flipfin.git
+   cd flipfin
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
 
-## Deploy on Vercel
+3. Set up environment variables:
+   Copy `.env.example` to `.env.local` and fill in your API keys (Helius, Jupiter, Birdeye, Supabase, etc.).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Run the development server:
+   ```bash
+   bun dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🛡 Security
+
+Flipfin prioritizes user security. Private keys are never stored on our servers and all transactions are signed client-side or through secure non-custodial methods.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

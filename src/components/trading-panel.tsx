@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { TradingViewChart } from "@/components/trading-view-chart";
+import { DxChart } from "@/components/dx-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -163,33 +163,11 @@ export function TradingPanel() {
         <StatItem label="Supply" value={formatNumber(selectedToken.marketCap / (selectedToken.price || 1))} />
       </div>
 
-      {/* Timeframe Selector */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1e2329]">
-        {["5M", "1H", "6H", "24H"].map((tf) => (
-          <button
-            key={tf}
-            onClick={() => setTimeframe(tf)}
-            className={cn(
-              "px-3 py-1 text-[10px] font-bold rounded transition-all",
-              timeframe === tf
-                ? "bg-[#02c076] text-black"
-                : "text-gray-500 hover:text-white hover:bg-[#1e2329]"
-            )}
-          >
-            {tf}
-            {tf === "24H" && (
-              <span className={cn("ml-1", isPositive ? "text-[#02c076]" : "text-[#f6465d]")}>
-                {isPositive ? "+" : ""}{selectedToken.priceChange24h.toFixed(0)}%
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Chart */}
       <div className="h-[200px] sm:h-[240px] border-b border-[#1e2329]">
-        <TradingViewChart symbol={selectedToken.symbol} tokenAddress={selectedToken.address} />
+        <DxChart symbol={selectedToken.symbol} tokenAddress={selectedToken.address} marketCap={selectedToken.marketCap} currentPrice={selectedToken.price} />
       </div>
+
 
       {/* Trade Panel */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">

@@ -18,7 +18,8 @@ import { useTokenPosition } from "@/hooks/use-token-positions";
 import { formatNumber, formatPrice, Token } from "@/lib/types";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { BirdeyeChart } from "@/components/birdeye-chart";
+import { DexScreenerChart } from "@/components/dexscreener-chart";
+import { DxChart } from "@/components/dx-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -49,6 +50,7 @@ export default function TradePage() {
   const [isTrading, setIsTrading] = useState(false);
   
   const [trades, setTrades] = useState<any[]>([]);
+  const [userTrades, setUserTrades] = useState<any[]>([]);
   const [tradesLoading, setTradesLoading] = useState(false);
   const [holders, setHolders] = useState<any[]>([]);
   const [holdersLoading, setHoldersLoading] = useState(false);
@@ -63,6 +65,42 @@ export default function TradePage() {
   const [tokenBanner, setTokenBanner] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>("chartTrade");
   const [isFavorited, setIsFavorited] = useState(false);
+  const [chartMode, setChartMode] = useState<"standard" | "pro">("standard");
+  const [chartHeight, setChartHeight] = useState(68);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isResizing = useRef(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = "row-resize";
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    document.body.style.cursor = "default";
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (!isResizing.current || !containerRef.current) return;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeY = e.clientY - containerRect.top;
+    const newHeight = (relativeY / containerRect.height) * 100;
+    
+    if (newHeight >= 20 && newHeight <= 85) {
+      setChartHeight(newHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   const checkFavorite = useCallback(async () => {
     if (!publicKey || !address) return;
@@ -270,20 +308,40 @@ export default function TradePage() {
     setAiLoading(false);
   }, [token, aiAnalysis, holdersCount, holders]);
 
-  useEffect(() => {
-    fetchToken();
-    fetchTrades();
-    fetchHolders();
-  }, []);
-  
+    const fetchUserTrades = useCallback(async () => {
+      if (!publicKey || !address) return;
+      try {
+        const res = await fetch(`/api/pnl?wallet=${publicKey}&token=${address}`);
+        const data = await res.json();
+        if (data.trades) {
+          setUserTrades(data.trades.map((t: any) => ({
+            timestamp: new Date(t.created_at).getTime(),
+            price: t.price,
+            type: t.side,
+            amount: t.amount,
+          })));
+        }
+      } catch (e) {
+        console.error("Error fetching user trades:", e);
+      }
+    }, [publicKey, address]);
+
+    useEffect(() => {
+      fetchToken();
+      fetchTrades();
+      fetchHolders();
+      fetchUserTrades();
+    }, [fetchToken, fetchTrades, fetchHolders, fetchUserTrades]);
+    
     useEffect(() => {
       const interval = setInterval(() => {
         fetchTrades(true);
         fetchToken(true);
+        fetchUserTrades();
       }, 2000);
       
       return () => clearInterval(interval);
-    }, [address, fetchTrades, fetchToken]);
+    }, [address, fetchTrades, fetchToken, fetchUserTrades]);
 
 
   useEffect(() => {
@@ -581,6 +639,19 @@ export default function TradePage() {
             >
               <Star className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", isFavorited && "fill-current")} />
             </button>
+          <button 
+            onClick={() => setChartMode(chartMode === "standard" ? "pro" : "standard")}
+            className={cn(
+              "p-1 sm:p-1.5 rounded flex items-center gap-1 transition-all",
+              chartMode === "pro" ? "bg-[#02c076]/20 text-[#02c076]" : "bg-[#1e2329] text-gray-500 hover:text-white"
+            )}
+            title={chartMode === "pro" ? "Switch to DexScreener" : "Switch to Pro Chart (with B/S markers)"}
+          >
+            <BarChart2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="text-[9px] sm:text-[10px] font-bold hidden xs:inline">
+              {chartMode === "pro" ? "PRO" : "STD"}
+            </span>
+          </button>
           <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
             <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
@@ -640,14 +711,42 @@ export default function TradePage() {
       {/* Desktop Layout: Left 80% (Chart 55% + History 45%), Right 20% (Trade) */}
       <div className="hidden lg:flex flex-1 overflow-hidden">
         {/* Left Column - 80% */}
-        <div className="w-[80%] flex flex-col border-r border-[#1e2329]">
-          {/* Chart - 55% */}
-          <div className="h-[55%] border-b border-[#1e2329]">
-            <BirdeyeChart symbol={token.symbol} tokenAddress={token.address} />
-          </div>
-          
-          {/* Trades/History - 45% */}
-          <div className="h-[45%] flex flex-col bg-[#0d1117]">
+        <div ref={containerRef} className="w-[80%] flex flex-col border-r border-[#1e2329] relative">
+            {/* Chart */}
+            <div 
+              style={{ height: `${chartHeight}%` }} 
+              className="border-b border-[#1e2329] overflow-hidden"
+            >
+              {chartMode === "standard" ? (
+                <DexScreenerChart 
+                  symbol={token.symbol} 
+                  tokenAddress={token.address} 
+                />
+              ) : (
+                <DxChart 
+                  symbol={token.symbol} 
+                  tokenAddress={token.address}
+                  currentPrice={token.price}
+                  marketCap={token.marketCap}
+                  userTrades={userTrades}
+                />
+              )}
+            </div>
+
+            {/* Resize Handle */}
+            <div 
+              onMouseDown={startResizing}
+              className="absolute left-0 right-0 h-2 -mt-1 cursor-row-resize z-50 group"
+              style={{ top: `${chartHeight}%` }}
+            >
+              <div className="w-full h-[1px] bg-transparent group-hover:bg-[#02c076] transition-colors" />
+            </div>
+  
+          {/* Trades/History */}
+          <div 
+            style={{ height: `${100 - chartHeight}%` }} 
+            className="flex flex-col bg-[#0d1117] overflow-hidden"
+          >
             <div className="flex items-center border-b border-[#1e2329] bg-[#0b0e11]">
               <div className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto no-scrollbar flex-1">
                 {[
@@ -733,10 +832,24 @@ export default function TradePage() {
       {/* Mobile Layout */}
       <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
         {mobileView === "chartTrade" && (
-          <>
-            <div className="h-[45%] min-h-[200px]">
-              <BirdeyeChart symbol={token.symbol} tokenAddress={token.address} />
-            </div>
+            <>
+                <div className="h-[65%] min-h-[200px]">
+                  {chartMode === "standard" ? (
+                    <DexScreenerChart 
+                      symbol={token.symbol} 
+                      tokenAddress={token.address} 
+                    />
+                  ) : (
+                    <DxChart 
+                      symbol={token.symbol} 
+                      tokenAddress={token.address}
+                      currentPrice={token.price}
+                      marketCap={token.marketCap}
+                      userTrades={userTrades}
+                    />
+                  )}
+                </div>
+
             <div className="flex-1 overflow-y-auto border-t border-[#1e2329]">
               <TradePanelContent
                 token={token}
