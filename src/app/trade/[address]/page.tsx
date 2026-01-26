@@ -19,7 +19,7 @@ import { formatNumber, formatPrice, Token } from "@/lib/types";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { DexScreenerChart } from "@/components/dexscreener-chart";
-import { DxChart } from "@/components/dx-chart";
+import { LightweightChart } from "@/components/lightweight-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -639,19 +639,20 @@ export default function TradePage() {
             >
               <Star className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", isFavorited && "fill-current")} />
             </button>
-          <button 
-            onClick={() => setChartMode(chartMode === "standard" ? "pro" : "standard")}
-            className={cn(
-              "p-1 sm:p-1.5 rounded flex items-center gap-1 transition-all",
-              chartMode === "pro" ? "bg-[#02c076]/20 text-[#02c076]" : "bg-[#1e2329] text-gray-500 hover:text-white"
-            )}
-            title={chartMode === "pro" ? "Switch to DexScreener" : "Switch to Pro Chart (with B/S markers)"}
-          >
-            <BarChart2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            <span className="text-[9px] sm:text-[10px] font-bold hidden xs:inline">
-              {chartMode === "pro" ? "PRO" : "STD"}
-            </span>
-          </button>
+            <button 
+              onClick={() => setChartMode(chartMode === "standard" ? "pro" : "standard")}
+              className={cn(
+                "p-1 sm:p-1.5 rounded flex items-center gap-1 transition-all",
+                chartMode === "pro" ? "bg-[#02c076]/20 text-[#02c076]" : "bg-[#1e2329] text-gray-500 hover:text-white"
+              )}
+              title={chartMode === "pro" ? "Switch to DexScreener" : "Switch to TV Light Chart (with B/S markers)"}
+            >
+              <BarChart2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="text-[9px] sm:text-[10px] font-bold hidden xs:inline">
+                {chartMode === "pro" ? "TV LIGHT" : "STD"}
+              </span>
+            </button>
+
           <button className="p-1 hover:bg-[#1e2329] rounded text-gray-500 hover:text-white">
             <Share2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
@@ -722,15 +723,16 @@ export default function TradePage() {
                   symbol={token.symbol} 
                   tokenAddress={token.address} 
                 />
-              ) : (
-                <DxChart 
-                  symbol={token.symbol} 
-                  tokenAddress={token.address}
-                  currentPrice={token.price}
-                  marketCap={token.marketCap}
-                  userTrades={userTrades}
-                />
-              )}
+                ) : (
+                  <LightweightChart 
+                    symbol={token.symbol} 
+                    tokenAddress={token.address}
+                    currentPrice={token.price}
+                    marketCap={token.marketCap}
+                    userTrades={userTrades}
+                  />
+                )}
+
             </div>
 
             {/* Resize Handle */}
@@ -839,15 +841,15 @@ export default function TradePage() {
                       symbol={token.symbol} 
                       tokenAddress={token.address} 
                     />
-                  ) : (
-                    <DxChart 
-                      symbol={token.symbol} 
-                      tokenAddress={token.address}
-                      currentPrice={token.price}
-                      marketCap={token.marketCap}
-                      userTrades={userTrades}
-                    />
-                  )}
+                    ) : (
+                      <LightweightChart 
+                        symbol={token.symbol} 
+                        tokenAddress={token.address}
+                        currentPrice={token.price}
+                        marketCap={token.marketCap}
+                        userTrades={userTrades}
+                      />
+                    )}
                 </div>
 
             <div className="flex-1 overflow-y-auto border-t border-[#1e2329]">

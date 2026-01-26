@@ -3,14 +3,14 @@ A professional Solana sniper bot and trading platform built with Next.js, featur
 
 ## Tech Stack
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS, Framer Motion
-- **Charting**: DexScreener (Primary for trade execution), @devexperts/dxcharts-lite (Secondary)
+- **Charting**: DexScreener (Primary), TradingView Lightweight Charts (Professional alternative with B/S markers)
 - **Solana**: @solana/web3.js, Jupiter SDK (Swap/Quote)
 - **Backend/API**: Birdeye (OHLCV/Analytics), DexScreener (Price/Pairs), Supabase (User data/Trades)
 - **Icons**: Lucide React
 
 ## Architecture
 - `src/app/trade/[address]`: Main trading interface with professional charting
-- `src/components/dx-chart.tsx`: Performance-optimized chart component using dxcharts-lite
+- `src/components/lightweight-chart.tsx`: TradingView Lightweight Charts component with real-time Birdeye data
 - `src/app/api/ohlcv`: Unified data endpoint favoring Birdeye for real-time accuracy
 - `src/hooks/use-jupiter.ts`: Core trading logic for Solana swaps
 
@@ -21,7 +21,7 @@ A professional Solana sniper bot and trading platform built with Next.js, featur
 - Direct Birdeye integration for price action accuracy
 
 ## Project Guidelines
-- Use `DxChart` for all charting requirements
+- Use `LightweightChart` as the professional charting alternative to DexScreener
 - Maintain a cohesive dark-themed aesthetic (ideally #0b0e11 / #0d1117 backgrounds)
 - No console logs in production; use silent error handling for API fallbacks
 - Favor Birdeye API for OHLCV data whenever possible

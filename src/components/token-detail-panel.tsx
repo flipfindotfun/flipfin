@@ -30,18 +30,28 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { DxChart } from "@/components/dx-chart";
+import { LightweightChart } from "@/components/lightweight-chart";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 export function TokenDetailPanel() {
-  const { selectedToken, setSelectedToken, settings, updateSettings, addTrade } = useApp();
+  const { selectedToken, setSelectedToken, settings, updateSettings, addTrade, trades } = useApp();
   const { publicKey, wallet, balance } = useWallet();
   const { getQuote, swap, loading: isSwapping, PLATFORM_FEE_BPS } = useJupiter();
   
   const [buyAmount, setBuyAmount] = useState(settings.buyAmountSOL.toString());
   const [isTrading, setIsTrading] = useState(false);
   const [activeTradeTab, setActiveTradeTab] = useState<"buy" | "sell">("buy");
+
+  // Get user trades for this specific token for markers
+  const userTrades = trades
+    .filter(t => t.tokenAddress === selectedToken?.address && t.status === "confirmed")
+    .map(t => ({
+      timestamp: t.timestamp,
+      price: t.price,
+      type: t.type,
+      amount: t.amountIn
+    }));
 
   if (!selectedToken) {
     return (
@@ -212,7 +222,13 @@ export function TokenDetailPanel() {
       <div className="flex-1 overflow-y-auto">
         {/* Chart */}
         <div className="h-[200px] sm:h-[280px] lg:h-[320px] border-b border-[#1a1a1a] bg-[#0a0a0a]">
-          <DxChart symbol={selectedToken.symbol} tokenAddress={selectedToken.address} marketCap={selectedToken.marketCap} currentPrice={selectedToken.price} />
+          <LightweightChart 
+            symbol={selectedToken.symbol} 
+            tokenAddress={selectedToken.address} 
+            marketCap={selectedToken.marketCap} 
+            currentPrice={selectedToken.price} 
+            userTrades={userTrades}
+          />
         </div>
 
 

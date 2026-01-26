@@ -41,14 +41,14 @@ export const metadata: Metadata = {
   }: Readonly<{
     children: React.ReactNode;
   }>) {
-      return (
-        <html lang="en" className="dark" data-scroll-behavior="smooth">
-          <head>
-            <link rel="icon" href="/logo.png" type="image/png" />
-            <link rel="shortcut icon" href="/logo.png" type="image/png" />
-            <link rel="apple-touch-icon" href="/logo.png" />
-          </head>
-        <body className="antialiased bg-[#0b0e11] text-white">
+    return (
+      <html lang="en" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
+        <head>
+          <link rel="icon" href="/logo.png" type="image/png" />
+          <link rel="shortcut icon" href="/logo.png" type="image/png" />
+          <link rel="apple-touch-icon" href="/logo.png" />
+        </head>
+      <body className="antialiased bg-[#0b0e11] text-white" suppressHydrationWarning>
         <AppProvider>
           <WalletProvider>
             <div className="flex h-screen">

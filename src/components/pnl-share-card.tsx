@@ -38,10 +38,18 @@ export function PnLShareCard({ summary, topTokens, walletAddress, onClose }: PnL
     if (!cardRef.current) return;
     setDownloading(true);
     try {
+      // Small delay to ensure all animations and images are ready
+      await new Promise(resolve => setTimeout(resolve, 100));
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
-        pixelRatio: 2,
+        pixelRatio: 3, // Higher resolution
         backgroundColor: "#0b0e11",
+        cacheBust: true,
+        skipFonts: true, // Often solves flickering/font issues
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        }
       });
       const link = document.createElement("a");
       link.download = `pnl-${shortWallet}-${Date.now()}.png`;
@@ -57,10 +65,18 @@ export function PnLShareCard({ summary, topTokens, walletAddress, onClose }: PnL
     if (!cardRef.current) return;
     setCopying(true);
     try {
+      // Small delay to ensure all animations and images are ready
+      await new Promise(resolve => setTimeout(resolve, 100));
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
-        pixelRatio: 2,
+        pixelRatio: 3, // Higher resolution
         backgroundColor: "#0b0e11",
+        cacheBust: true,
+        skipFonts: true, // Often solves flickering/font issues
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        }
       });
       const blob = await (await fetch(dataUrl)).blob();
       await navigator.clipboard.write([
@@ -201,9 +217,10 @@ export function PnLShareCard({ summary, topTokens, walletAddress, onClose }: PnL
                       )}>
                         {idx + 1}
                       </span>
-                      {token.image ? (
-                        <img src={token.image} alt="" className="w-5 h-5 rounded-full" />
-                      ) : (
+                        {token.image ? (
+                          <img src={token.image} alt="" className="w-5 h-5 rounded-full" crossOrigin="anonymous" />
+                        ) : (
+
                         <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center">
                           <span className="text-[8px] text-gray-400">{token.symbol.slice(0, 2)}</span>
                         </div>

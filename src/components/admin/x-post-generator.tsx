@@ -168,6 +168,7 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
         quality: 1,
         pixelRatio: 2,
         cacheBust: true,
+        includeQueryParams: true,
       });
       const link = document.createElement("a");
       link.download = `featured-${token.symbol.toLowerCase()}.png`;
@@ -298,7 +299,7 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
                       <div className="relative">
                         <div className="absolute -inset-4 bg-[#02c076]/20 rounded-full blur-xl opacity-50" />
                         <div className="relative w-32 h-32 rounded-full border-4 border-[#02c076] p-1.5 bg-[#0b0e11]">
-                          <img src={token.logo_url} alt={token.symbol} className="w-full h-full rounded-full object-cover" />
+                          <img src={token.logo_url} alt={token.symbol} className="w-full h-full rounded-full object-cover" crossOrigin="anonymous" />
                         </div>
                         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#02c076] text-black text-[10px] font-black uppercase px-3 py-0.5 rounded-full whitespace-nowrap border-2 border-[#0b0e11]">
                           Featured Token
