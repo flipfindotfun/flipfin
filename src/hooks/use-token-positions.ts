@@ -165,12 +165,12 @@ export function useTokenPositions() {
   useEffect(() => {
     if (!publicKey) return;
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !loading) {
         fetchPositions();
       }
-    }, 120000); // Increased to 120s
+    }, 180000); // Increased to 180s (3m)
     return () => clearInterval(interval);
-  }, [publicKey, fetchPositions]);
+  }, [publicKey, fetchPositions, loading]);
 
   return { positions, loading, error, refetch: fetchPositions };
 }

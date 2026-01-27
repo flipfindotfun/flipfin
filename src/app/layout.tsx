@@ -53,10 +53,12 @@ export const metadata: Metadata = {
           <WalletProvider>
             <div className="flex h-screen">
                 <Sidebar />
-                <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
-                  <FeaturedTokensBar />
-                  {children}
-                </main>
+                  <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
+                    <FeaturedTokensBar />
+                    <div className="flex-1 overflow-y-auto">
+                      {children}
+                    </div>
+                  </main>
               <MobileNav />
             </div>
             <Toaster 

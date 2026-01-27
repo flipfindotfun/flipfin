@@ -97,12 +97,12 @@ export default function FlowPage() {
     setSelectedNode(node);
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-[#0b0e11] overflow-hidden">
-      <Header />
-      
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col">
+    return (
+      <div className="flex flex-col h-full bg-[#0b0e11]">
+        <Header />
+        
+        <div className="flex-1 flex flex-col lg:flex-row">
+          <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between px-4 py-2 border-b border-[#1e2329]">
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-white">Money Flow Map</h1>
@@ -177,12 +177,12 @@ export default function FlowPage() {
           )}
 
           {data && (
-            <div className="hidden sm:block">
+            <div className="block">
               <FlowMetrics metrics={data.metrics} />
             </div>
           )}
 
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-h-[500px]">
             <div className="absolute top-4 left-4 z-10 sm:hidden">
               <Sheet>
                 <SheetTrigger asChild>

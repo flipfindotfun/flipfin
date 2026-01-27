@@ -10,25 +10,31 @@ export function useJupiter() {
   const { wallet, publicKey, refreshBalance } = useWallet();
   const [loading, setLoading] = useState(false);
 
-  const getQuote = useCallback(async (
-    inputMint: string,
-    outputMint: string,
-    amount: number
-  ) => {
-    try {
-      if (amount <= 0) {
-        return { error: "Amount must be greater than 0" };
-      }
+    const getQuote = useCallback(async (
+      inputMint: string,
+      outputMint: string,
+      amount: number,
+      slippageBps?: number
+    ) => {
+      try {
+        if (amount <= 0) {
+          return { error: "Amount must be greater than 0" };
+        }
+  
+        const params = new URLSearchParams({
+          inputMint,
+          outputMint,
+          amount: Math.floor(amount).toString(),
+        });
+  
+        if (publicKey) {
+          params.append("taker", publicKey);
+        }
 
-      const params = new URLSearchParams({
-        inputMint,
-        outputMint,
-        amount: Math.floor(amount).toString(),
-      });
+        if (slippageBps) {
+          params.append("slippageBps", slippageBps.toString());
+        }
 
-      if (publicKey) {
-        params.append("taker", publicKey);
-      }
 
       const response = await fetch(`/api/jupiter/quote?${params}`, {
         method: "GET",

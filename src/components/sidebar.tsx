@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 
 const navItems = [
+  { icon: Zap, label: "Buy FlipFin", href: "/buy" },
   { icon: Search, label: "Explore", href: "/" },
   { icon: Coins, label: "Tokens", href: "/tokens" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
@@ -94,6 +95,7 @@ export function Sidebar() {
 }
 
 const mobileNavItems = [
+  { icon: Zap, label: "Buy $FLIP", href: "/buy" },
   { icon: Search, label: "Explore", href: "/" },
   { icon: Coins, label: "Tokens", href: "/tokens" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },

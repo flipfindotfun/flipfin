@@ -10,11 +10,13 @@ import {
   Eye, 
   BookOpen, 
   Shield,
-  LayoutGrid
+  LayoutGrid,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { href: "/buy", icon: Zap, label: "Buy $FLIP" },
   { href: "/", icon: Search, label: "Explore" },
   { href: "/portfolio", icon: PieChart, label: "Portfolio" },
   { href: "/rewards", icon: Trophy, label: "Rewards" },

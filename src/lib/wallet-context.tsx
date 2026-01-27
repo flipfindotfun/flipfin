@@ -28,7 +28,7 @@ export const connection = new Connection(RPC_URL, {
 });
 
 // Helper for RPC calls with basic retry logic
-export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let lastError: any;
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -36,7 +36,8 @@ export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promis
     } catch (err: any) {
       lastError = err;
       if (err.message?.includes('429') || err.toString().includes('429')) {
-        const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+        // Exponential backoff with jitter
+        const delay = Math.pow(3, i) * 1000 + Math.random() * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }

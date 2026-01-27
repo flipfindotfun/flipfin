@@ -73,14 +73,16 @@ export interface WalletState {
   positions: Position[];
 }
 
-export function formatNumber(num: number, decimals = 2): string {
+export function formatNumber(num: number | undefined | null, decimals = 2): string {
+  if (num === undefined || num === null || isNaN(num)) return "0";
   if (num >= 1e9) return (num / 1e9).toFixed(decimals) + 'B';
   if (num >= 1e6) return (num / 1e6).toFixed(decimals) + 'M';
   if (num >= 1e3) return (num / 1e3).toFixed(decimals) + 'K';
   return num.toFixed(decimals);
 }
 
-export function formatPrice(price: number): string {
+export function formatPrice(price: number | undefined | null): string {
+  if (price === undefined || price === null || isNaN(price)) return "0.00";
   if (price === 0) return "0.00";
   if (price < 0.000000001) return price.toExponential(2);
   if (price < 0.0001) return price.toFixed(10);

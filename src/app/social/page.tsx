@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/header";
 import {
   Shield,
@@ -18,6 +18,7 @@ import {
   Search,
   MessageCircle,
   Heart,
+  X as XIconLucide,
 } from "lucide-react";
 import { XIcon } from "@/components/icons";
 import Link from "next/link";
@@ -27,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { AIAnalysisWidget } from "@/components/ai-analysis-widget";
 import { TwitterFeed } from "@/components/twitter-feed";
 import { MarketStatsWidget } from "@/components/market-stats-widget";
+import { useApp } from "@/lib/context";
 
 interface TokenHype {
   address: string;
@@ -47,35 +49,130 @@ interface TokenHype {
   sentiment?: { score: number; label: string; engagement: number };
 }
 
+interface SearchResult {
+  address: string;
+  symbol: string;
+  name: string;
+  price: number;
+  priceChange24h: number;
+  logoURI?: string;
+  marketCap: number;
+}
+
 export default function SocialProofPage() {
   const [tokens, setTokens] = useState<TokenHype[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenHype | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { prefetchSecurity } = useApp();
 
   useEffect(() => {
     fetchTokens();
   }, []);
 
-  const fetchTokens = async () => {
-    try {
-      const res = await fetch("/api/social-proof");
-      const data = await res.json();
-      setTokens(data.tokens || []);
-    } catch (err) {
-      console.error("Failed to fetch social proof data:", err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
     }
+
+    const isAddress = searchQuery.length >= 32 && searchQuery.length <= 44;
+    
+    const search = async () => {
+      setSearchLoading(true);
+      try {
+        if (isAddress) {
+          const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${searchQuery}`);
+          const pairs = await res.json();
+          
+          if (Array.isArray(pairs) && pairs.length > 0) {
+            const mainPair = pairs.sort((a: any, b: any) => 
+              (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+            )[0];
+            
+            setSearchResults([{
+              address: mainPair.baseToken.address,
+              symbol: mainPair.baseToken.symbol,
+              name: mainPair.baseToken.name,
+              price: parseFloat(mainPair.priceUsd) || 0,
+              priceChange24h: mainPair.priceChange?.h24 || 0,
+              logoURI: mainPair.info?.imageUrl,
+              marketCap: mainPair.fdv || 0,
+            }]);
+          } else {
+            setSearchResults([]);
+          }
+        } else {
+          const res = await fetch(
+            `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(searchQuery)}`
+          );
+          const data = await res.json();
+          
+          if (data.pairs && Array.isArray(data.pairs)) {
+            const tokenMap = new Map<string, SearchResult>();
+            
+            data.pairs
+              .filter((p: any) => p.chainId === "solana")
+              .slice(0, 20)
+              .forEach((pair: any) => {
+                const existing = tokenMap.get(pair.baseToken.address);
+                const liquidity = pair.liquidity?.usd || 0;
+                
+                if (!existing || liquidity > (existing.marketCap || 0)) {
+                  tokenMap.set(pair.baseToken.address, {
+                    address: pair.baseToken.address,
+                    symbol: pair.baseToken.symbol,
+                    name: pair.baseToken.name,
+                    price: parseFloat(pair.priceUsd) || 0,
+                    priceChange24h: pair.priceChange?.h24 || 0,
+                    logoURI: pair.info?.imageUrl,
+                    marketCap: pair.fdv || 0,
+                  });
+                }
+              });
+            
+            setSearchResults(Array.from(tokenMap.values()).slice(0, 8));
+          }
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(search, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  const handleSelectResult = (result: SearchResult) => {
+    setSearchQuery(result.address);
+    setShowSearchResults(false);
+    triggerAnalysis(result.address);
   };
 
-  const analyzeToken = async () => {
-    if (!searchQuery || searchQuery.length < 32) return;
+  const triggerAnalysis = async (address: string) => {
+    if (!address || address.length < 32) return;
     
     setAnalyzing(true);
     try {
-      const res = await fetch(`/api/social-proof?address=${searchQuery}`);
+      const res = await fetch(`/api/social-proof?address=${address}`);
       const data = await res.json();
       if (data.token) {
         setTokens((prev) => {
@@ -91,6 +188,22 @@ export default function SocialProofPage() {
       setAnalyzing(false);
       setSearchQuery("");
     }
+  };
+
+  const fetchTokens = async () => {
+    try {
+      const res = await fetch("/api/social-proof");
+      const data = await res.json();
+      setTokens(data.tokens || []);
+    } catch (err) {
+      console.error("Failed to fetch social proof data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeToken = async () => {
+    await triggerAnalysis(searchQuery);
   };
 
   const getHypeColor = (score: number) => {
@@ -127,27 +240,65 @@ export default function SocialProofPage() {
 
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" ref={containerRef}>
                   <div className="relative flex-1 sm:w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <Input
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowSearchResults(true);
+                      }}
+                      onFocus={() => setShowSearchResults(true)}
                       onKeyDown={(e) => e.key === "Enter" && analyzeToken()}
-                      placeholder="Paste token address..."
-                      className="pl-9 pr-4 bg-[#1e2329] border-[#2b3139] text-xs"
+                      placeholder="Search name or paste CA..."
+                      className="pl-9 pr-4 bg-[#1e2329] border-[#2b3139] text-xs h-9"
                     />
+                    
+                    {showSearchResults && (searchQuery.length >= 2 || searchResults.length > 0) && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#0d1117] border border-[#1e2329] rounded-lg shadow-xl z-50 max-h-[300px] overflow-y-auto">
+                        {searchLoading ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="w-4 h-4 animate-spin text-[#02c076]" />
+                          </div>
+                        ) : searchResults.length > 0 ? (
+                          <div className="py-1">
+                            {searchResults.map((result) => (
+                              <button
+                                key={result.address}
+                                onClick={() => handleSelectResult(result)}
+                                className="w-full px-3 py-2 flex items-center gap-3 hover:bg-[#1e2329] transition-colors"
+                              >
+                                {result.logoURI ? (
+                                  <img src={result.logoURI} alt={result.symbol} className="w-6 h-6 rounded" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded bg-[#1e2329] flex items-center justify-center text-[10px] font-bold text-gray-500">
+                                    {result.symbol.slice(0, 2)}
+                                  </div>
+                                )}
+                                <div className="flex-1 text-left min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-xs">{result.symbol}</span>
+                                    <span className="text-gray-500 text-[10px] truncate">{result.name}</span>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={analyzeToken}
                     disabled={analyzing || searchQuery.length < 32}
-                    className="px-4 py-2 bg-[#02c076] text-black text-xs font-bold rounded-lg hover:bg-[#02a566] disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 bg-[#02c076] text-black text-xs font-bold rounded-lg hover:bg-[#02a566] disabled:opacity-50 transition-colors h-9"
                   >
                     {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Analyze"}
                   </button>
                   <button
                     onClick={fetchTokens}
-                    className="p-2 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+                    className="p-2 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors h-9"
                   >
                     <RefreshCw className="w-4 h-4 text-white" />
                   </button>
@@ -350,7 +501,7 @@ export default function SocialProofPage() {
                     <div className="text-center py-20 text-gray-500">
                       <Shield className="w-12 h-12 mx-auto mb-4 opacity-30" />
                       <p>No tokens analyzed yet</p>
-                      <p className="text-xs mt-1">Paste a token address above to analyze</p>
+                      <p className="text-xs mt-1">Search for a token above to analyze</p>
                     </div>
                   )}
                 </div>

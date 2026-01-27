@@ -8,7 +8,7 @@ const REFERRAL_FEE_BPS = 50; // 0.5% fee (50-255 bps allowed)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inputMint, outputMint, amount, taker } = body;
+    const { inputMint, outputMint, amount, taker, slippageBps } = body;
 
     if (!inputMint || !outputMint || !amount) {
       return NextResponse.json(
@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
 
     if (taker) {
       params.append("taker", taker);
+    }
+
+    if (slippageBps) {
+      params.append("slippageBps", slippageBps.toString());
     }
 
     if (REFERRAL_ACCOUNT) {
@@ -72,6 +76,7 @@ export async function GET(request: NextRequest) {
     const outputMint = searchParams.get("outputMint");
     const amount = searchParams.get("amount");
     const taker = searchParams.get("taker");
+    const slippageBps = searchParams.get("slippageBps");
 
     if (!inputMint || !outputMint || !amount) {
       return NextResponse.json(
@@ -88,6 +93,10 @@ export async function GET(request: NextRequest) {
 
     if (taker) {
       params.append("taker", taker);
+    }
+
+    if (slippageBps) {
+      params.append("slippageBps", slippageBps);
     }
 
     if (REFERRAL_ACCOUNT) {

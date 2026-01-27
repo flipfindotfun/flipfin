@@ -153,24 +153,28 @@ const sections = [
       }
     ]
   },
-  {
-    id: "token",
-    title: "$FLIP Token",
-    subtitle: "Coming to PumpFun",
-    icon: Coins,
-    gradient: "from-[#02c076] to-emerald-300",
-    content: [
-      {
-        type: "tokenomics",
-        items: [
-          { label: "Total Supply", value: "1B", sub: "$FLIP" },
-          { label: "Dev Allocation", value: "10%", sub: "Transparent" },
-          { label: "Public Sale", value: "90%", sub: "Fair Launch" },
-          { label: "Liquidity", value: "100%", sub: "Burned Forever" },
-        ]
-      },
-      {
-        type: "utility",
+    {
+      id: "token",
+      title: "$FLIP Token",
+      subtitle: "Launch on PumpFun",
+      icon: Coins,
+      gradient: "from-[#02c076] to-emerald-300",
+      content: [
+        {
+          type: "tokenomics",
+          items: [
+            { label: "Total Supply", value: "1B", sub: "$FLIP" },
+            { label: "Dev Wallet", value: "10%", sub: "Reserved" },
+            { label: "Public", value: "90%", sub: "Fair Launch" },
+            { label: "Liquidity", value: "100%", sub: "Burned" },
+          ]
+        },
+        {
+          type: "ca",
+          address: "DUkYuJ1gxHSuYh1Dky3CaGtawLCDWsqx7KVgLwCtpump"
+        },
+        {
+          type: "utility",
         items: [
           "Governance voting on platform features",
           "Fee discounts on trades",
@@ -303,6 +307,35 @@ const sections = [
   },
 ];
 
+function CopyableAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 p-3 bg-[#0b0e11] rounded-lg border border-[#2b3139]">
+      <code className="text-[10px] sm:text-xs text-gray-400 break-all font-mono leading-relaxed">
+        {address}
+      </code>
+      <button 
+        onClick={handleCopy}
+        className="p-2 hover:bg-[#1e2329] rounded-lg transition-colors flex-shrink-0"
+        title="Copy Address"
+      >
+        {copied ? (
+          <Check className="w-4 h-4 text-[#02c076]" />
+        ) : (
+          <Copy className="w-4 h-4 text-gray-500 hover:text-[#02c076]" />
+        )}
+      </button>
+    </div>
+  );
+}
+
 function ContentRenderer({ content, sectionId }: { content: any[]; sectionId: string }) {
   return (
     <div className="space-y-8">
@@ -370,6 +403,17 @@ function ContentRenderer({ content, sectionId }: { content: any[]; sectionId: st
                     <p className="text-sm text-gray-500">{item.desc}</p>
                   </div>
                 ))}
+              </div>
+            );
+
+          case "ca":
+            return (
+              <div key={idx} className="rounded-xl bg-[#1e2329]/50 border border-[#2b3139] p-5">
+                <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-[#02c076]" />
+                  Contract Address
+                </h4>
+                <CopyableAddress address={block.address} />
               </div>
             );
 

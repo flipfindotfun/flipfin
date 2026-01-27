@@ -400,15 +400,17 @@ export default function TradePage() {
         rawAmount = Math.floor(sellAmount * Math.pow(10, position.decimals || 9));
       }
 
-      const quote = await getQuote(inputMint, outputMint, rawAmount);
-      
-      if (quote && !quote.error) {
-        const outDecimals = activeTab === "buy" ? (token.decimals || 9) : 9;
-        setQuoteInfo({
-          outAmount: (parseFloat(quote.outAmount) / Math.pow(10, outDecimals)).toFixed(6),
-          priceImpact: quote.priceImpactPct ? `${(parseFloat(quote.priceImpactPct) * 100).toFixed(2)}%` : "< 0.01%",
-        });
-      } else if (quote?.error) {
+        const slippageBps = Math.floor(slippage * 100);
+        const quote = await getQuote(inputMint, outputMint, rawAmount, slippageBps);
+        
+        if (quote && !quote.error) {
+          const outDecimals = activeTab === "buy" ? (token.decimals || 9) : 9;
+          setQuoteInfo({
+            outAmount: (parseFloat(quote.outAmount) / Math.pow(10, outDecimals)).toString(),
+            priceImpact: quote.priceImpactPct ? `${(parseFloat(quote.priceImpactPct) * 100).toFixed(2)}%` : "< 0.01%",
+          });
+        } else if (quote?.error) {
+
         setQuoteError(quote.error);
       }
     } catch (e: any) {
@@ -482,10 +484,12 @@ export default function TradePage() {
         displayAmount = sellAmount;
       }
 
-      toast.loading("Getting quote...");
-      const quote = await getQuote(inputMint, outputMint, rawAmount);
-      
-      if (!quote || quote.error) {
+        toast.loading("Getting quote...");
+        const slippageBps = Math.floor(slippage * 100);
+        const quote = await getQuote(inputMint, outputMint, rawAmount, slippageBps);
+        
+        if (!quote || quote.error) {
+
         toast.dismiss();
         toast.error(quote?.error || "Failed to get quote");
         setIsTrading(false);
@@ -1256,10 +1260,11 @@ function TradePanelContent({
 
             {!isMobile && (
               <>
-                <div className="grid grid-cols-4 gap-1 pt-1">
-                  {["Top 10", "DEV", "Holders", "Snipers"].map((label, i) => (
-                    <div key={label} className="text-center">
-                      <p className="text-[9px] text-gray-500">{label}</p>
+                  <div className="grid grid-cols-4 gap-1 pt-1">
+                    {["Top 10", "DEV", "Holders", "Early Entry"].map((label, i) => (
+                      <div key={label} className="text-center">
+                        <p className="text-[9px] text-gray-500">{label}</p>
+
                       <p className={cn(
                         "text-[10px] font-bold",
                         i === 0 ? "text-[#f6465d]" : i === 1 ? "text-yellow-500" : "text-white"

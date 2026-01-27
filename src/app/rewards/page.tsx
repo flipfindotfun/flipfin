@@ -251,37 +251,41 @@ export default function RewardsPage() {
       }
     };
 
-    const verifyTask = async (taskId: string) => {
-      if (!publicKey) return;
-      
-      const task = tasks.find(t => t.id === taskId);
-      if (task && task.current_value < task.target_value) {
-        toast.error(`Insufficient progress. Required: $${task.target_value.toLocaleString()}, Current: $${Math.floor(task.current_value).toLocaleString()}`);
-        return;
+      const verifyTask = async (taskId: string) => {
+        if (!publicKey) return;
+        
+        const task = tasks.find(t => t.id === taskId);
+        if (task && task.current_value < task.target_value) {
+          toast.error(`Insufficient progress. Required: $${task.target_value.toLocaleString()}, Current: $${Math.floor(task.current_value).toLocaleString()}`);
+          return;
+        }
+  
+        if (taskId === 'yapping_post') setVerifyingX(true);
+        const t = toast.loading(`Verifying ${taskId}...`);
+  
+      try {
+        const endpoint = taskId === 'yapping_post' ? "/api/rewards/yapping/verify" : "/api/rewards/tasks";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: publicKey, taskId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || "Task completed!", { id: t });
+          fetchTasks();
+          refreshProfile();
+          fetchHistory();
+        } else {
+          toast.error(data.error || "Verification failed", { id: t });
+        }
+      } catch (err) {
+        toast.error("Failed to verify task", { id: t });
+      } finally {
+        if (taskId === 'yapping_post') setVerifyingX(false);
       }
+    };
 
-      const t = toast.loading(`Verifying ${taskId}...`);
-
-    try {
-      const endpoint = taskId === 'yapping_post' ? "/api/rewards/yapping/verify" : "/api/rewards/tasks";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: publicKey, taskId })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || "Task completed!", { id: t });
-        fetchTasks();
-        refreshProfile();
-        fetchHistory();
-      } else {
-        toast.error(data.error || "Verification failed", { id: t });
-      }
-    } catch (err) {
-      toast.error("Failed to verify task", { id: t });
-    }
-  };
 
   const connectTwitter = () => {
     if (!publicKey) {
