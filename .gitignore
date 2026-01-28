@@ -3,13 +3,12 @@ node_modules
 out
 build
 .env
-.env.local
+
 .env.production
 .env.development
 .env.test
 .env.sample
 .env.*.local
-.env.local
 
 # Project specific
 bot/logs
