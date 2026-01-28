@@ -45,15 +45,15 @@ export function useTokenPositions() {
             jsonrpc: '2.0',
             id: 'holdings',
             method: 'getAssetsByOwner',
-            params: {
-              ownerAddress: publicKey,
-              page: 1,
-              limit: 100,
-              displayOptions: {
-                showFungible: true,
-                showNativeBalance: false,
+              params: {
+                ownerAddress: publicKey,
+                page: 1,
+                limit: 100,
+                displayOptions: {
+                  showFungible: true,
+                  showNativeBalance: true,
+                },
               },
-            },
           }),
         }));
 
@@ -61,7 +61,9 @@ export function useTokenPositions() {
         
         if (data.result?.items) {
           const fungibleTokens = data.result.items.filter(
-            (item: any) => item.interface === 'FungibleToken' || item.interface === 'FungibleAsset'
+            (item: any) => 
+              (item.interface === 'FungibleToken' || item.interface === 'FungibleAsset' || item.token_info) &&
+              !item.content?.metadata?.name?.includes('NFT') // Basic NFT exclusion
           );
 
           const mints = fungibleTokens.map((t: any) => t.id);
@@ -168,7 +170,7 @@ export function useTokenPositions() {
       if (document.visibilityState === 'visible' && !loading) {
         fetchPositions();
       }
-    }, 180000); // Increased to 180s (3m)
+    }, 60000); // Decreased to 60s (1m) from 180s
     return () => clearInterval(interval);
   }, [publicKey, fetchPositions, loading]);
 

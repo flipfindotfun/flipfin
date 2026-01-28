@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, X, PieChart, Eye, Trophy, Activity, BookOpen, Shield, Flame, TrendingUp, Vote, Menu } from "lucide-react";
+import { Search, Loader2, X, PieChart, Eye, Trophy, Activity, BookOpen, Shield, Flame, TrendingUp, Vote, Menu, Wallet, Copy, ExternalLink, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { WalletButton } from "@/components/wallet-button";
 import { useApp } from "@/lib/context";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { formatNumber } from "@/lib/types";
+import { formatNumber, shortenAddress } from "@/lib/types";
 import { useProfile } from "@/hooks/use-profile";
+import { useWallet } from "@/lib/wallet-context";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -31,6 +33,7 @@ interface SearchResult {
 export function Header() {
   const { solPrice, prefetchSecurity } = useApp();
   const { profile } = useProfile();
+  const { publicKey, balance, disconnectWallet } = useWallet();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -325,6 +328,43 @@ export function Header() {
               </SheetTitle>
             </SheetHeader>
             <div className="p-4 space-y-6">
+              {publicKey && (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2">Wallet</p>
+                  <div className="bg-[#1e2329] rounded-xl p-4 border border-[#2b3139]">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-[#02c076] animate-pulse" />
+                        <span className="font-mono text-xs text-white">{shortenAddress(publicKey, 6)}</span>
+                      </div>
+                      <span className="text-[#02c076] font-bold text-sm">{balance.toFixed(3)} SOL</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(publicKey);
+                          toast.success("Address copied!");
+                        }}
+                        className="flex items-center justify-center gap-2 py-2 bg-[#2b3139] hover:bg-[#363d47] rounded-lg text-xs font-medium text-white transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Copy
+                      </button>
+                      <button 
+                        onClick={() => {
+                          disconnectWallet();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="flex items-center justify-center gap-2 py-2 bg-[#f6465d]/10 hover:bg-[#f6465d]/20 rounded-lg text-xs font-medium text-[#f6465d] transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2">Navigation</p>
                 <NavLinks mobile />

@@ -162,8 +162,8 @@ export function WalletButton() {
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[#02c076] hidden sm:block" />
             <span className="font-mono text-[10px] hidden sm:inline">{shortenAddress(publicKey, 3)}</span>
-            <span className="text-[#02c076] font-bold text-[10px] hidden sm:inline">{balance.toFixed(2)} SOL</span>
-            <Wallet className="w-4 h-4 text-[#02c076]" />
+            <span className="text-[#02c076] font-bold text-[10px]">{balance.toFixed(balance < 10 ? 2 : 1)} SOL</span>
+            <Wallet className="w-4 h-4 text-[#02c076] hidden sm:block" />
             <ChevronDown className="w-3 h-3 text-gray-500 hidden sm:block" />
           </div>
         </Button>
