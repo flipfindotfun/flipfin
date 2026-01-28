@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
-import { Sidebar } from "@/components/sidebar";
 import { 
   Vote, 
   Plus, 
@@ -148,12 +147,10 @@ export default function GovernancePage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0b0e11] overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+    <div className="flex flex-col h-full bg-[#0b0e11] overflow-hidden">
+      <Header />
+      
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           <div className="max-w-4xl mx-auto space-y-8">
             
             {/* Header Section */}
@@ -382,7 +379,6 @@ export default function GovernancePage() {
 
           </div>
         </main>
-      </div>
     </div>
   );
 }
