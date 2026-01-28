@@ -30,8 +30,24 @@ export function Header() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [trendingTokens, setTrendingTokens] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const res = await fetch("/api/trending");
+        const data = await res.json();
+        if (data.success) {
+          setTrendingTokens(data.tokens.slice(0, 2));
+        }
+      } catch (err) {
+        console.error("Trending fetch error:", err);
+      }
+    };
+    fetchTrending();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -251,15 +267,35 @@ export function Header() {
               <BookOpen className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-xs font-medium text-white">Narratives</span>
             </Link>
+
+            {/* Dynamic Trending Tokens */}
+            <div className="hidden xl:flex items-center gap-2">
+              {trendingTokens.map((token) => (
+                <Link
+                  key={token.address}
+                  href={`/trade/${token.address}`}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors border border-transparent hover:border-[#02c076]/30 group"
+                >
+                  {token.logoURI ? (
+                    <img src={token.logoURI} alt={token.symbol} className="w-3.5 h-3.5 rounded-full" />
+                  ) : (
+                    <TrendingUp className="w-3.5 h-3.5 text-[#02c076]" />
+                  )}
+                  <span className="text-[10px] font-bold text-white group-hover:text-[#02c076]">{token.symbol}</span>
+                  {token.priceChange24h !== undefined && (
+                    <span className={cn(
+                      "text-[9px] font-mono",
+                      token.priceChange24h >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
+                    )}>
+                      {token.priceChange24h >= 0 ? "+" : ""}{token.priceChange24h.toFixed(1)}%
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
             <Link 
-              href="/"
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-[#02c076]" />
-              <span className="text-xs font-medium text-white uppercase tracking-tight">Trending</span>
-            </Link>
-              <Link 
-                href="/social"
+              href="/social"
               className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
             >
               <Shield className="w-3.5 h-3.5 text-orange-400" />
