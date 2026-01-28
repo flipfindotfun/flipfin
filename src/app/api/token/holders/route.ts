@@ -128,80 +128,81 @@ async function fetchHolderPnL(wallet: string, tokenMint: string): Promise<Holder
   }
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const address = searchParams.get("address");
-  const limit = parseInt(searchParams.get("limit") || "50");
-  const includePnl = searchParams.get("pnl") === "true";
-
-  if (!address) {
-    return NextResponse.json({ error: "Token address is required" }, { status: 400 });
-  }
-
-  let totalHolders = 0;
-  let tokenPrice = 0;
-
-  if (BIRDEYE_API_KEY) {
-    try {
-      const overviewRes = await axios.get(
-        `https://public-api.birdeye.so/defi/token_overview`,
-        {
-          params: { address },
-          headers: {
-            "X-API-KEY": BIRDEYE_API_KEY,
-            "x-chain": "solana",
-          },
-          timeout: 8000,
-        }
-      );
-      totalHolders = overviewRes.data?.data?.holder || 0;
-      tokenPrice = overviewRes.data?.data?.price || 0;
-    } catch (e) {
-      console.log("Birdeye overview error");
+  export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const address = searchParams.get("address");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const includePnl = searchParams.get("pnl") === "true";
+  
+    if (!address) {
+      return NextResponse.json({ error: "Token address is required" }, { status: 400 });
     }
-  }
-
-  if (HELIUS_API_KEY) {
+  
+    let totalHolders = 0;
+    let tokenPrice = 0;
+    let tokenSupply = 0;
+    let tokenDecimals = 9;
+  
+    // 1. Fetch price and basic info from DexScreener first (free and fast)
     try {
-      const { supply, decimals } = await getTokenSupply(address);
-      
-      const allAccounts: TokenAccount[] = [];
-      let page = 1;
-      const maxPages = 10;
-      
-      while (page <= maxPages) {
-        const response = await axios.post(
-          `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
-          {
-            jsonrpc: "2.0",
-            id: "helius-holders",
-            method: "getTokenAccounts",
-            params: {
-              page: page,
-              limit: 1000,
-              displayOptions: {},
-              mint: address,
-            },
-          },
-          { timeout: 15000 }
-        );
-
-        const accounts = response.data?.result?.token_accounts || [];
-        
-        if (accounts.length === 0) {
-          break;
-        }
-        
-        allAccounts.push(...accounts);
-        page++;
-        
-        if (accounts.length < 1000) {
-          break;
-        }
+      const dexRes = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${address}`, { timeout: 5000 });
+      const pairs = dexRes.data?.pairs || [];
+      if (pairs.length > 0) {
+        tokenPrice = parseFloat(pairs[0].priceUsd || "0");
       }
+    } catch (e) {
+      console.log("DexScreener price error");
+    }
 
-      if (allAccounts.length === 0) {
-        const fallbackResponse = await axios.post(
+    // 2. Try Birdeye for more detailed info if available
+    if (BIRDEYE_API_KEY) {
+      try {
+        const marketRes = await axios.get(
+          `https://public-api.birdeye.so/defi/v3/token/market-data`,
+          {
+            params: { address },
+            headers: {
+              "X-API-KEY": BIRDEYE_API_KEY,
+              "x-chain": "solana",
+            },
+            timeout: 5000,
+          }
+        );
+        if (marketRes.data?.data) {
+          tokenPrice = marketRes.data.data.price || tokenPrice;
+          tokenSupply = marketRes.data.data.circulatingSupply || marketRes.data.data.totalSupply || 0;
+        }
+
+        // Try to get holder count from metadata or overview
+        const metaRes = await axios.get(
+          `https://public-api.birdeye.so/defi/v3/token/meta-data/single`,
+          {
+            params: { address },
+            headers: {
+              "X-API-KEY": BIRDEYE_API_KEY,
+              "x-chain": "solana",
+            },
+            timeout: 5000,
+          }
+        );
+        totalHolders = metaRes.data?.data?.holder || 0;
+      } catch (e) {
+        console.log("Birdeye v3 meta/market error");
+      }
+    }
+
+    // 3. Try Helius for Holders (Optimized)
+    if (HELIUS_API_KEY) {
+      try {
+        // If we don't have supply yet, get it
+        if (tokenSupply === 0) {
+          const supplyInfo = await getTokenSupply(address);
+          tokenSupply = supplyInfo.supply;
+          tokenDecimals = supplyInfo.decimals;
+        }
+
+        // Use getTokenLargestAccounts as it's much faster and less likely to 429
+        const response = await axios.post(
           `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
           {
             jsonrpc: "2.0",
@@ -209,19 +210,17 @@ export async function GET(request: Request) {
             method: "getTokenLargestAccounts",
             params: [address],
           },
-          { timeout: 15000 }
+          { timeout: 10000 }
         );
 
-        const accounts = fallbackResponse.data?.result?.value || [];
+        const accounts = response.data?.result?.value || [];
         
-          const totalSupplyFromAccounts = accounts.reduce((sum: number, acc: any) => 
-            sum + (parseFloat(acc.uiAmount) || 0), 0
-          );
-          const initialSupply = supply > 0 ? supply : totalSupplyFromAccounts;
-          const lpAmount = parseFloat(accounts[0]?.uiAmount) || 0;
-          const actualSupply = initialSupply - lpAmount;
-
-          const ownerPromises = accounts.slice(1, Math.min(limit + 1, 21)).map(async (acc: any) => {
+        if (accounts.length > 0) {
+          // Resolve owners for the top accounts
+          // Limit to top 20 to avoid rate limits
+          const topAccounts = accounts.slice(0, Math.min(limit, 20));
+          
+          const ownerPromises = topAccounts.map(async (acc: any) => {
             try {
               const ownerRes = await axios.post(
                 `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
@@ -231,24 +230,25 @@ export async function GET(request: Request) {
                   method: "getAccountInfo",
                   params: [acc.address, { encoding: "jsonParsed" }],
                 },
-                { timeout: 5000 }
+                { timeout: 3000 }
               );
               return ownerRes.data?.result?.value?.data?.parsed?.info?.owner || acc.address;
             } catch {
-              return acc.address;
+              return acc.address; // Fallback to account address if owner resolution fails
             }
           });
 
           const owners = await Promise.all(ownerPromises);
 
           const mappedHolders = await Promise.all(
-            accounts.slice(1, Math.min(limit + 1, 21)).map(async (acc: any, i: number) => {
+            topAccounts.map(async (acc: any, i: number) => {
               const amount = parseFloat(acc.uiAmount) || 0;
-              const percentage = actualSupply > 0 ? (amount / actualSupply) * 100 : 0;
+              const percentage = tokenSupply > 0 ? (amount / tokenSupply) * 100 : 0;
               const value = amount * tokenPrice;
               
+              // Only fetch PnL for top 5 to avoid 429
               let pnl = null;
-              if (includePnl && i < 10) {
+              if (includePnl && i < 5) {
                 pnl = await fetchHolderPnL(owners[i], address);
               }
               
@@ -265,112 +265,56 @@ export async function GET(request: Request) {
             })
           );
 
-        return NextResponse.json({ 
-          holders: mappedHolders,
-          source: "helius-fallback",
-          total: totalHolders || accounts.length
-        });
+          return NextResponse.json({ 
+            holders: mappedHolders,
+            source: "helius-top",
+            total: totalHolders || accounts.length,
+            tokenPrice
+          });
+        }
+      } catch (error: any) {
+        console.error("Helius holders error:", error.message);
       }
-
-      const totalRawSupply = allAccounts.reduce((sum, acc) => sum + (acc.amount || 0), 0);
-
-      const sortedAccounts = allAccounts
-        .filter(acc => acc.amount > 0)
-        .sort((a, b) => b.amount - a.amount);
-
-        const lpAmount = sortedAccounts[0]?.amount || 0;
-        const circulatingSupply = totalRawSupply - lpAmount;
-
-        const mappedHolders = await Promise.all(
-          sortedAccounts.slice(1, limit + 1).map(async (acc, i) => {
-            const rawAmount = acc.amount || 0;
-            const displayAmount = rawAmount / Math.pow(10, decimals);
-            const percentage = circulatingSupply > 0 ? (rawAmount / circulatingSupply) * 100 : 0;
-            const value = displayAmount * tokenPrice;
-            
-            let pnl = null;
-            if (includePnl && i < 10) {
-              pnl = await fetchHolderPnL(acc.owner, address);
-            }
-            
-            return {
-              rank: i + 1,
-              address: acc.owner,
-              addressShort: shortenAddress(acc.owner),
-              balance: displayAmount,
-              percentage: percentage,
-              value: value,
-              txCount: 0,
-              pnl: pnl,
-            };
-          })
-        );
-
-        const top10Percent = sortedAccounts.slice(1, 11).reduce((sum, acc) => 
-          sum + (circulatingSupply > 0 ? (acc.amount / circulatingSupply) * 100 : 0), 0
-        );
-        const top100Percent = sortedAccounts.slice(1, 101).reduce((sum, acc) => 
-          sum + (circulatingSupply > 0 ? (acc.amount / circulatingSupply) * 100 : 0), 0
-        );
-        const top500Percent = sortedAccounts.slice(1, 501).reduce((sum, acc) => 
-          sum + (circulatingSupply > 0 ? (acc.amount / circulatingSupply) * 100 : 0), 0
-        );
-
-      return NextResponse.json({ 
-        holders: mappedHolders,
-        source: "helius",
-        total: totalHolders || sortedAccounts.length,
-        distribution: {
-          top10: top10Percent,
-          top100: top100Percent,
-          top500: top500Percent,
-          totalTracked: sortedAccounts.length,
-        }
-      });
-    } catch (error: any) {
-      console.error("Helius holders error:", error.message);
     }
-  }
 
-  if (BIRDEYE_API_KEY) {
-    try {
-      const response = await axios.get(
-        `https://public-api.birdeye.so/defi/v2/tokens/${address}/top_traders`,
-        {
-          params: { limit },
-          headers: {
-            "X-API-KEY": BIRDEYE_API_KEY,
-            "x-chain": "solana",
-          },
-          timeout: 10000,
-        }
-      );
+    // 4. Final Fallback to Birdeye v3 Holders
+    if (BIRDEYE_API_KEY) {
+      try {
+        const response = await axios.get(
+          `https://public-api.birdeye.so/defi/v3/token/holder`,
+          {
+            params: { address, offset: 0, limit: limit },
+            headers: {
+              "X-API-KEY": BIRDEYE_API_KEY,
+              "x-chain": "solana",
+            },
+            timeout: 10000,
+          }
+        );
 
-        const traders = response.data?.data?.items || [];
-        const lpPercentage = traders[0]?.percentage || 0;
-        const circulatingScale = 100 / (100 - lpPercentage);
-        
-        const mappedHolders = traders.slice(1, limit + 1).map((t: any, i: number) => ({
+        const items = response.data?.data?.items || response.data?.data || [];
+        const mappedHolders = items.map((t: any, i: number) => ({
           rank: i + 1,
-          address: t.owner,
-          addressShort: shortenAddress(t.owner),
-          balance: t.balance || 0,
-          percentage: (t.percentage || 0) * circulatingScale,
-          value: t.valueUSD || 0,
-          txCount: t.txCount || 0,
+          address: t.owner_address || t.owner || "",
+          addressShort: shortenAddress(t.owner_address || t.owner || ""),
+          balance: t.ui_amount || t.uiAmount || 0,
+          percentage: (t.ui_amount / tokenSupply) * 100 || 0,
+          value: (t.ui_amount || 0) * tokenPrice,
+          txCount: 0,
           pnl: null,
         }));
 
-      return NextResponse.json({ 
-        holders: mappedHolders,
-        source: "birdeye",
-        total: totalHolders || traders.length 
-      });
-    } catch (error: any) {
-      console.error("Birdeye holders error:", error.response?.data || error.message);
+        return NextResponse.json({ 
+          holders: mappedHolders,
+          source: "birdeye-v3",
+          total: totalHolders || items.length,
+          tokenPrice
+        });
+      } catch (error: any) {
+        console.error("Birdeye holders error:", error.response?.data || error.message);
+      }
     }
-  }
-
+  
   return NextResponse.json({ 
     holders: [],
     total: totalHolders,
