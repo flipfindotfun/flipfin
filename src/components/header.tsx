@@ -244,15 +244,22 @@ export function Header() {
             <Activity className="w-3.5 h-3.5 text-[#02c076]" />
             <span className="text-xs font-medium text-white">Flow</span>
           </Link>
-          <Link 
-            href="/narratives"
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xs font-medium text-white">Narratives</span>
-          </Link>
             <Link 
-              href="/social"
+              href="/narratives"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-xs font-medium text-white">Narratives</span>
+            </Link>
+            <Link 
+              href="/"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-[#02c076]" />
+              <span className="text-xs font-medium text-white uppercase tracking-tight">Trending</span>
+            </Link>
+              <Link 
+                href="/social"
               className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
             >
               <Shield className="w-3.5 h-3.5 text-orange-400" />
