@@ -14,24 +14,25 @@ export async function GET(request: NextRequest) {
 
   const codeVerifier = request.cookies.get('twitter_code_verifier')?.value;
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://flipfin.fun";
+  const origin = request.nextUrl.origin;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || origin;
 
-    if (error || !code || !state || !codeVerifier) {
-      console.error("Twitter callback error:", { error, code, state, hasVerifier: !!codeVerifier });
-      return NextResponse.redirect(`${baseUrl}/rewards?error=twitter_auth_failed`);
-    }
+  if (error || !code || !state || !codeVerifier) {
+    console.error("Twitter callback error:", { error, code, state, hasVerifier: !!codeVerifier });
+    return NextResponse.redirect(`${baseUrl}/rewards?error=twitter_auth_failed`);
+  }
 
-    try {
-      const client = new TwitterApi({
-        clientId: process.env.TWITTER_CLIENT_ID!,
-        clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-      });
+  try {
+    const client = new TwitterApi({
+      clientId: process.env.TWITTER_CLIENT_ID!,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+    });
 
-      const { client: loggedClient, accessToken, refreshToken, expiresIn } = await client.loginWithOAuth2({
-        code,
-        codeVerifier,
-        redirectUri: `${baseUrl}/api/twitter/callback`,
-      });
+    const { client: loggedClient, accessToken, refreshToken, expiresIn } = await client.loginWithOAuth2({
+      code,
+      codeVerifier,
+      redirectUri: `${baseUrl}/api/twitter/callback`,
+    });
 
 
     // Get user info
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
         if (updateError) {
           console.error("Error updating profile with Twitter handle:", updateError);
-          return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://flipfin.fun'}/rewards?error=profile_update_failed`);
+          return NextResponse.redirect(`${baseUrl}/rewards?error=profile_update_failed`);
         }
 
         // Check if connect_x task is already completed
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Success! Redirect back to rewards
-        const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://flipfin.fun'}/rewards?success=twitter_connected`);
+        const response = NextResponse.redirect(`${baseUrl}/rewards?success=twitter_connected`);
         
         // Clear the verifier cookie
         response.cookies.delete('twitter_code_verifier');
@@ -102,9 +103,9 @@ export async function GET(request: NextRequest) {
         return response;
       }
 
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://flipfin.fun'}/rewards?error=user_not_found`);
+      return NextResponse.redirect(`${baseUrl}/rewards?error=user_not_found`);
     } catch (err) {
       console.error("Twitter OAuth error:", err);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://flipfin.fun'}/rewards?error=internal_error`);
+      return NextResponse.redirect(`${baseUrl}/rewards?error=internal_error`);
     }
 }

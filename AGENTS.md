@@ -30,3 +30,9 @@ A professional Solana sniper bot and trading platform built with Next.js, featur
 - OHLCV data fetching via `/api/ohlcv` with timeframe support
 - Token security analysis displayed alongside trading panels
 - Optimistic trade tracking in local state before Supabase confirmation
+
+## Security & Deployment
+- **Secrets Management**: Never commit `.env` or `.env.local` files. These are strictly for local development and are ignored via `.gitignore`.
+- **Deployment**: All environment variables must be manually added to the deployment platform (e.g., Vercel, Railway) under Project Settings.
+- **API Keys**: Use `process.env` for all sensitive keys (Jupiter, Birdeye, Groq, Supabase).
+- **GitHub Push Protection**: If a push is blocked due to leaked secrets, use the GitHub provided "unblock" URL after ensuring the secret is no longer in the active codebase and has been rotated.

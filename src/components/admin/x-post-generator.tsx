@@ -164,11 +164,26 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
     if (!previewRef.current || !token) return;
     setIsDownloading(true);
     try {
+      // Ensure all images are loaded before capturing
+      const images = previewRef.current.getElementsByTagName("img");
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = resolve; // Continue anyway
+        });
+      }));
+
       const dataUrl = await toPng(previewRef.current, {
         quality: 1,
-        pixelRatio: 2,
+        pixelRatio: 3, // Higher resolution for X
         cacheBust: true,
         includeQueryParams: true,
+        backgroundColor: "#0b0e11",
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        }
       });
       const link = document.createElement("a");
       link.download = `featured-${token.symbol.toLowerCase()}.png`;
@@ -299,7 +314,7 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
                       <div className="relative">
                         <div className="absolute -inset-4 bg-[#02c076]/20 rounded-full blur-xl opacity-50" />
                         <div className="relative w-32 h-32 rounded-full border-4 border-[#02c076] p-1.5 bg-[#0b0e11]">
-                          <img src={token.logo_url} alt={token.symbol} className="w-full h-full rounded-full object-cover" crossOrigin="anonymous" />
+                          <img src={`/api/proxy-image?url=${encodeURIComponent(token.logo_url)}`} alt={token.symbol} className="w-full h-full rounded-full object-cover" crossOrigin="anonymous" />
                         </div>
                         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#02c076] text-black text-[10px] font-black uppercase px-3 py-0.5 rounded-full whitespace-nowrap border-2 border-[#0b0e11]">
                           Featured Token
@@ -317,12 +332,13 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
                 {imageTemplate === "impact" && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-12">
                     <img src="/logo.png" alt="Logo" className="absolute top-8 left-1/2 -translate-x-1/2 w-8 h-8 opacity-50" />
-                    <div className="relative mb-6">
-                      <div className="absolute -inset-12 bg-[#02c076]/30 rounded-full blur-[60px]" />
-                      <div className="relative w-40 h-40 rounded-full border-8 border-white p-2 bg-[#0b0e11] shadow-2xl">
-                        <img src={token.logo_url} alt={token.symbol} className="w-full h-full rounded-full object-cover" />
+                      <div className="relative mb-6">
+                        <div className="absolute -inset-12 bg-[#02c076]/30 rounded-full blur-[60px]" />
+                        <div className="relative w-40 h-40 rounded-full border-8 border-white p-2 bg-[#0b0e11] shadow-2xl">
+                          <img src={`/api/proxy-image?url=${encodeURIComponent(token.logo_url)}`} alt={token.symbol} className="w-full h-full rounded-full object-cover" crossOrigin="anonymous" />
+                        </div>
                       </div>
-                    </div>
+
                     <h2 className="text-8xl font-black text-white tracking-[0.2em] uppercase mb-2">{token.symbol}</h2>
                     <div className="bg-[#02c076] text-black font-black text-sm px-6 py-2 rounded-full uppercase tracking-[0.3em]">Featured on Flipfin.fun</div>
                   </div>
@@ -330,12 +346,13 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
 
                 {imageTemplate === "split" && (
                   <div className="absolute inset-0 flex">
-                    <div className="w-1/2 h-full flex items-center justify-center p-12">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-[#02c076] rounded-full blur-[80px] opacity-20" />
-                        <img src={token.logo_url} alt={token.symbol} className="relative w-48 h-48 rounded-full shadow-2xl border-4 border-white/10" />
+                      <div className="w-1/2 h-full flex items-center justify-center p-12">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-[#02c076] rounded-full blur-[80px] opacity-20" />
+                          <img src={`/api/proxy-image?url=${encodeURIComponent(token.logo_url)}`} alt={token.symbol} className="relative w-48 h-48 rounded-full shadow-2xl border-4 border-white/10" crossOrigin="anonymous" />
+                        </div>
                       </div>
-                    </div>
+
                     <div className="w-1/2 h-full flex flex-col items-start justify-center p-12 bg-[#0b0e11]">
                       <div className="flex items-center gap-2 mb-8">
                         <img src="/logo.png" alt="Logo" className="w-6 h-6" />
@@ -383,11 +400,12 @@ export function XPostGenerator({ token, onClose }: XPostGeneratorProps) {
                       <div className="absolute top-0 right-0 p-4 opacity-10">
                          <img src="/logo.png" alt="Logo" className="w-24 h-24" />
                       </div>
-                      <div className="relative z-10 flex items-center gap-8 w-full">
-                        <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-[#02c076] to-[#00a86b] p-1 shadow-2xl">
-                          <img src={token.logo_url} alt={token.symbol} className="w-full h-full rounded-2xl object-cover" />
-                        </div>
-                        <div className="flex-1">
+                        <div className="relative z-10 flex items-center gap-8 w-full">
+                          <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-[#02c076] to-[#00a86b] p-1 shadow-2xl">
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(token.logo_url)}`} alt={token.symbol} className="w-full h-full rounded-2xl object-cover" crossOrigin="anonymous" />
+                          </div>
+                          <div className="flex-1">
+
                           <div className="flex items-center gap-3 mb-2">
                              <div className="px-3 py-1 bg-[#02c076]/20 text-[#02c076] text-[10px] font-black rounded-md border border-[#02c076]/30 uppercase">Featured</div>
                              <span className="text-gray-500 font-mono text-xs">SOLANA NETWORK</span>

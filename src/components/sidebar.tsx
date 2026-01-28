@@ -23,7 +23,8 @@ import { useState } from "react";
 const navItems = [
   { icon: Zap, label: "Buy FlipFin", href: "/buy" },
   { icon: Search, label: "Explore", href: "/" },
-  { icon: Coins, label: "Tokens", href: "/tokens" },
+  { icon: TrendingUp, label: "Trending", href: "/tokens" },
+  { icon: Coins, label: "Consolidate and Distribute", href: "/wallet/distribution" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
   { icon: Gift, label: "Rewards", href: "/rewards" },
   { icon: Eye, label: "Tracker", href: "/tracker" },
@@ -31,6 +32,16 @@ const navItems = [
   { icon: FileText, label: "Docs", href: "/docs" },
   { icon: Wallet, label: "Wallet", href: "/wallet" },
   { icon: Settings, label: "Settings", href: "/settings" },
+];
+
+const mobileNavItems = [
+  { icon: Zap, label: "Buy $FLIP", href: "/buy" },
+  { icon: Search, label: "Explore", href: "/" },
+  { icon: TrendingUp, label: "Trending", href: "/tokens" },
+  { icon: Coins, label: "Consolidate and Distribute", href: "/wallet/distribution" },
+  { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
+  { icon: Gift, label: "Rewards", href: "/rewards" },
+  { icon: Eye, label: "Tracker", href: "/tracker" },
 ];
 
 export function Sidebar() {
@@ -93,15 +104,6 @@ export function Sidebar() {
     </aside>
   );
 }
-
-const mobileNavItems = [
-  { icon: Zap, label: "Buy $FLIP", href: "/buy" },
-  { icon: Search, label: "Explore", href: "/" },
-  { icon: Coins, label: "Tokens", href: "/tokens" },
-  { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
-  { icon: Gift, label: "Rewards", href: "/rewards" },
-  { icon: Eye, label: "Tracker", href: "/tracker" },
-];
 
 export function MobileNav() {
   const pathname = usePathname();

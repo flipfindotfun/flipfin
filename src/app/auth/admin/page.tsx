@@ -42,9 +42,9 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-[#0b0e11] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-[#14191f] rounded-2xl border border-[#1e2329] p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-[#02c076] to-[#00a86b] flex items-center justify-center">
+        <div className="bg-[#14191f] rounded-2xl border border-[#1e2329] p-6 md:p-8 shadow-2xl">
+          <div className="text-center mb-6 md:mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-[#02c076] to-[#00a86b] flex items-center justify-center shadow-lg shadow-[#02c076]/20">
               <Lock className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Admin Portal</h1>

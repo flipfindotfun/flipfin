@@ -59,63 +59,7 @@ export async function GET(request: Request) {
     const timeFrom = Math.floor(Date.now() / 1000) - intervalSeconds * candleCount;
     const timeTo = Math.floor(Date.now() / 1000);
 
-    // 1. Try Birdeye V3 (Standard for Solana)
-    if (BIRDEYE_API_KEY) {
-      try {
-        const response = await axios.get(
-          `https://public-api.birdeye.so/defi/v3/ohlcv`,
-          {
-            params: {
-              address: address,
-              type: normalizedType,
-              time_from: timeFrom,
-              time_to: timeTo,
-              chain: "solana",
-            },
-            headers: {
-              "X-API-KEY": BIRDEYE_API_KEY,
-              "x-chain": "solana",
-              "Accept": "application/json",
-            },
-            timeout: 8000,
-          }
-        );
-
-        const items = response.data?.data?.items || response.data?.data;
-
-        if (items && Array.isArray(items) && items.length > 0) {
-          const mappedItems = items.map((item: any) => {
-            if (Array.isArray(item)) {
-              return {
-                unixTime: item[0],
-                o: item[1],
-                h: item[2],
-                l: item[3],
-                c: item[4],
-                v: item[5] || 0,
-              };
-            }
-            return {
-              unixTime: item.unixTime || item.time,
-              o: item.valueOpen || item.o || item.open || 0,
-              h: item.valueHigh || item.h || item.high || 0,
-              l: item.valueLow || item.l || item.low || 0,
-              c: item.valueClose || item.c || item.close || 0,
-              v: item.v_usd || item.volume || item.v || 0,
-            };
-          }).filter(item => item.unixTime && !isNaN(item.o) && item.o > 0);
-
-          if (mappedItems.length > 0) {
-            ohlcvCache.set(cacheKey, { items: mappedItems, timestamp: Date.now() });
-            return NextResponse.json({ items: mappedItems, source: "birdeye" });
-          }
-        }
-      } catch (error: any) {
-        console.log("Birdeye V3 failed, trying fallback...");
-      }
-    }
-
-    // 2. Fetch pair info from DexScreener to get Pool Address for GeckoTerminal
+    // 1. Try DexScreener First (High reliability & Free)
     let currentPrice = 0;
     let priceChanges = { m5: 0, h1: 0, h6: 0, h24: 0 };
     let pairCreatedAt = 0;
@@ -148,7 +92,7 @@ export async function GET(request: Request) {
       console.log("DexScreener fetch failed");
     }
 
-    // 3. Try GeckoTerminal (Free & High Reliability)
+    // 2. Try GeckoTerminal (Free & High Reliability)
     if (poolAddress) {
       try {
         let gtTimeframe = "minute";
@@ -191,15 +135,15 @@ export async function GET(request: Request) {
       }
     }
 
-    // 4. Final Fallback: Derived Data (Improved realism)
+    // 3. Fallback: Derived Data (Improved realism)
     if (currentPrice > 0) {
       const items = generateCandlesFromPrice(currentPrice, priceChanges, normalizedType, pairCreatedAt);
       ohlcvCache.set(cacheKey, { items, timestamp: Date.now() });
       return NextResponse.json({ items, source: "derived" });
     }
 
-
-  if (cached) {
+    // 4. Stale Cache Fallback
+    if (cached) {
     return NextResponse.json({
       items: cached.items,
       cached: true,

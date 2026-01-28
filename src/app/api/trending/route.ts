@@ -4,8 +4,9 @@ import axios from "axios";
 export const dynamic = "force-dynamic";
 
 const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
+const BIRDEYE_API_URL = "https://public-api.birdeye.so";
 
-let cachedData: { tokens: any[]; timestamp: number; source: string } | null = null;
+let cachedData: { tokens: any[]; timestamp: number; source: string | undefined } | null = null;
 const CACHE_DURATION = 60000;
 
 export async function GET() {
@@ -19,7 +20,53 @@ export async function GET() {
     });
   }
 
-  // Try DexScreener first (more reliable, no rate limits)
+  // Try Birdeye first (more accurate for Solana)
+  try {
+    const birdeyeRes = await axios.get(`${BIRDEYE_API_URL}/defi/token_trending`, {
+      params: {
+        sort_by: "rank",
+        sort_type: "asc",
+        offset: 0,
+        limit: 20,
+      },
+      headers: {
+        "X-API-KEY": BIRDEYE_API_KEY,
+        accept: "application/json",
+      },
+      timeout: 10000,
+    });
+
+    if (birdeyeRes.data?.success && birdeyeRes.data?.data?.tokens) {
+      const tokens = birdeyeRes.data.data.tokens.map((t: any) => ({
+        address: t.address,
+        symbol: t.symbol,
+        name: t.name,
+        decimals: t.decimals,
+        price: t.price || 0,
+        priceChange24h: t.price_change_24h_percent || 0,
+        volume24h: t.v24h_usd || 0,
+        liquidity: t.liquidity || 0,
+        marketCap: t.mc || 0,
+        logoURI: t.logo_uri,
+        rank: t.rank,
+        source: "birdeye",
+      }));
+
+      if (tokens.length > 0) {
+        cachedData = { tokens, timestamp: Date.now(), source: "birdeye" };
+        return NextResponse.json({
+          success: true,
+          tokens,
+          source: "birdeye",
+          timestamp: Date.now(),
+        });
+      }
+    }
+  } catch (error: any) {
+    console.error("Birdeye trending error:", error.message);
+  }
+
+  // Try DexScreener as fallback
   try {
     const dsResponse = await axios.get("https://api.dexscreener.com/token-profiles/latest/v1", {
       timeout: 10000,
@@ -99,65 +146,12 @@ export async function GET() {
         });
       }
     }
-  } catch (error: any) {
-    console.error("DexScreener error:", error.message);
-  }
-
-  if (BIRDEYE_API_KEY) {
-    try {
-      const response = await axios.get(
-        "https://public-api.birdeye.so/defi/token_trending",
-        {
-          params: {
-            sort_by: "rank",
-            sort_type: "desc",
-            offset: 0,
-            limit: 20
-          },
-          headers: {
-            "accept": "application/json",
-            "X-API-KEY": BIRDEYE_API_KEY,
-            "x-chain": "solana"
-          },
-          timeout: 15000
-        }
-      );
-
-      if (response.data?.success && response.data?.data?.tokens) {
-        const tokens = response.data.data.tokens;
-        
-        const mappedTokens = tokens.map((t: any) => ({
-          address: t.address,
-          symbol: t.symbol,
-          name: t.name,
-          decimals: t.decimals || 9,
-          price: t.price || 0,
-          priceChange24h: t.priceChange24h || 0,
-          volume24h: t.volume24hUSD || 0,
-          liquidity: t.liquidity || 0,
-          marketCap: t.mc || t.volume24hUSD || 0,
-          logoURI: t.logoURI,
-          rank: t.rank
-        }));
-
-        if (mappedTokens.length > 0) {
-          cachedData = { tokens: mappedTokens, timestamp: Date.now(), source: "birdeye" };
-        }
-
-        return NextResponse.json({
-          success: true,
-          tokens: mappedTokens,
-          source: "birdeye",
-          timestamp: Date.now(),
-        });
-      }
     } catch (error: any) {
-      console.error("Birdeye error:", error.response?.status, error.response?.data || error.message);
+      console.error("DexScreener error:", error.message);
     }
-  }
 
-  // Return cached data even if stale, or empty
-  if (cachedData) {
+    // Return cached data even if stale, or empty
+    if (cachedData) {
     return NextResponse.json({
       success: true,
       tokens: cachedData.tokens,

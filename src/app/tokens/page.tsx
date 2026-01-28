@@ -162,13 +162,13 @@ export default function TokensPage() {
     <div className="flex flex-col h-full bg-[#0b0e11]">
       <div className="sticky top-0 z-10 bg-[#0b0e11] border-b border-[#1e2329]">
         <div className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Solana Tokens</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Browse all tokens on Solana • {tokens.length} tokens loaded
-              </p>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">Trending Tokens</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Discover trending tokens and new profiles on Solana
+                </p>
+              </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => fetchTokens(true)}

@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   Search, 
-  Activity, 
+  TrendingUp,
   PieChart, 
   Trophy, 
   Eye, 
-  BookOpen, 
-  Shield,
+  Coins,
   LayoutGrid,
   Zap
 } from "lucide-react";
@@ -18,10 +17,10 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/buy", icon: Zap, label: "Buy $FLIP" },
   { href: "/", icon: Search, label: "Explore" },
+  { href: "/tokens", icon: TrendingUp, label: "Trending" },
+  { href: "/wallet/distribution", icon: Coins, label: "Distribute" },
   { href: "/portfolio", icon: PieChart, label: "Portfolio" },
-  { href: "/rewards", icon: Trophy, label: "Rewards" },
   { href: "/tracker", icon: Eye, label: "Tracker" },
-  { href: "/leaderboard", icon: LayoutGrid, label: "Leaderboard" },
 ];
 
 export function MobileNav() {

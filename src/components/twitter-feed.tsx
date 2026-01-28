@@ -53,9 +53,9 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
       const res = await fetch(`/api/twitter?${params}`);
       const data = await res.json();
       
-      setTweets(data.tweets || []);
-      setSentiment(data.analysis);
-      if (data.meta?.error) {
+        setTweets(data.tweets || []);
+        setSentiment(data.sentiment);
+        if (data.meta?.error) {
         setError(true);
       }
     } catch (err) {
@@ -93,11 +93,11 @@ export function TwitterFeed({ query, tokenSymbol, limit = 5, className, title = 
           <span className="text-sm font-medium text-white">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          {sentiment && tweets.length > 0 && (
-            <span className={cn("px-2 py-0.5 text-[10px] font-medium rounded-full capitalize", getSentimentColor(sentiment.sentiment))}>
-              {sentiment.sentiment} ({sentiment.sentimentScore}%)
-            </span>
-          )}
+            {sentiment && tweets.length > 0 && (
+              <span className={cn("px-2 py-0.5 text-[10px] font-medium rounded-full capitalize", getSentimentColor(sentiment.label))}>
+                {sentiment.label} ({sentiment.score}%)
+              </span>
+            )}
           <button
             onClick={fetchTweets}
             disabled={loading}

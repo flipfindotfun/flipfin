@@ -14,13 +14,15 @@ export async function GET(request: NextRequest) {
     clientSecret: process.env.TWITTER_CLIENT_SECRET!,
   });
 
-  // We use OAuth2 with PKCE
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://flipfin.fun";
+    // We use OAuth2 with PKCE
+    const origin = request.nextUrl.origin;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || origin;
     
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(
       `${baseUrl}/api/twitter/callback`,
       { scope: ['tweet.read', 'users.read', 'tweet.write', 'offline.access'], state: wallet }
     );
+
 
 
   const response = NextResponse.redirect(url);

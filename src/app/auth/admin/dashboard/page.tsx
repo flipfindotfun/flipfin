@@ -373,89 +373,98 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-[#0b0e11]">
       <header className="bg-[#14191f] border-b border-[#1e2329] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#02c076] to-[#00a86b] flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-white" />
+          <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#02c076] to-[#00a86b] flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-white truncate">FlipFin Admin</h1>
+                <p className="text-xs text-gray-500 truncate">{admin?.email}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">FlipFin Admin</h1>
-              <p className="text-xs text-gray-500">{admin?.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => { if (activeTab === "overview") fetchDashboard(); if (activeTab === "health") fetchHealth(); if (activeTab === "logs") fetchLogs(); if (activeTab === "fees") fetchFees(); }} disabled={refreshing} className="p-2 rounded-lg bg-[#1e2329] text-gray-400 hover:text-white transition-colors disabled:opacity-50">
-              <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
-            </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 pb-0">
-          <div className="flex gap-1 border-b border-[#1e2329]">
-            {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px", activeTab === tab.id ? "text-[#02c076] border-[#02c076]" : "text-gray-500 border-transparent hover:text-gray-300")}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button onClick={() => { if (activeTab === "overview") fetchDashboard(); if (activeTab === "health") fetchHealth(); if (activeTab === "logs") fetchLogs(); if (activeTab === "fees") fetchFees(); }} disabled={refreshing} className="p-2 rounded-lg bg-[#1e2329] text-gray-400 hover:text-white transition-colors disabled:opacity-50">
+                <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
               </button>
-            ))}
+              <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm">
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
+          <div className="max-w-7xl mx-auto px-4 pb-0 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1 border-b border-[#1e2329] min-w-max">
+              {tabs.map((tab) => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px", activeTab === tab.id ? "text-[#02c076] border-[#02c076]" : "text-gray-500 border-transparent hover:text-gray-300")}>
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {activeTab === "overview" && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-6">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-4 sm:p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 rounded-lg bg-blue-500/10"><Users className="w-6 h-6 text-blue-400" /></div>
                   <span className="text-gray-400 text-sm">Total Users</span>
                 </div>
-                <p className="text-3xl font-bold text-white">{formatNumber(data?.stats.totalUsers || 0)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{formatNumber(data?.stats.totalUsers || 0)}</p>
               </div>
-              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-6">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-4 sm:p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 rounded-lg bg-purple-500/10"><Activity className="w-6 h-6 text-purple-400" /></div>
                   <span className="text-gray-400 text-sm">Total Trades</span>
                 </div>
-                <p className="text-3xl font-bold text-white">{formatNumber(data?.stats.totalTrades || 0)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{formatNumber(data?.stats.totalTrades || 0)}</p>
               </div>
-              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-6">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] p-4 sm:p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 rounded-lg bg-green-500/10"><DollarSign className="w-6 h-6 text-green-400" /></div>
                   <span className="text-gray-400 text-sm">Total Volume</span>
                 </div>
-                <p className="text-3xl font-bold text-white">{formatCurrency(data?.stats.totalVolume || 0)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{formatCurrency(data?.stats.totalVolume || 0)}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-[#14191f] rounded-xl border border-[#1e2329]">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] overflow-hidden">
                 <div className="p-4 border-b border-[#1e2329] flex items-center gap-2"><Clock className="w-5 h-5 text-[#02c076]" /><h2 className="text-lg font-bold text-white">Recent Users</h2></div>
                 <div className="divide-y divide-[#1e2329] max-h-80 overflow-y-auto">
                   {(data?.recentUsers || []).length === 0 ? <p className="p-4 text-gray-500 text-sm text-center">No users yet</p> : data?.recentUsers.map((user, idx) => (
                     <div key={idx} className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#1e2329] flex items-center justify-center"><Wallet className="w-5 h-5 text-gray-500" /></div>
-                        <div><p className="font-mono text-white text-sm">{formatWallet(user.wallet_address)}</p><p className="text-xs text-gray-500">{formatDate(user.created_at)}</p></div>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#1e2329] flex items-center justify-center flex-shrink-0"><Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" /></div>
+                        <div className="min-w-0">
+                          <p className="font-mono text-white text-xs sm:text-sm truncate">{formatWallet(user.wallet_address)}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500">{formatDate(user.created_at)}</p>
+                        </div>
                       </div>
-                      <div className="text-right"><p className="text-sm font-bold text-[#02c076]">{formatNumber(user.total_points)} pts</p><p className="text-xs text-gray-500">{formatCurrency(user.total_volume)}</p></div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <p className="text-xs sm:text-sm font-bold text-[#02c076]">{formatNumber(user.total_points)} pts</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500">{formatCurrency(user.total_volume)}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="bg-[#14191f] rounded-xl border border-[#1e2329]">
+              <div className="bg-[#14191f] rounded-xl border border-[#1e2329] overflow-hidden">
                 <div className="p-4 border-b border-[#1e2329] flex items-center gap-2"><Crown className="w-5 h-5 text-yellow-500" /><h2 className="text-lg font-bold text-white">Top Traders</h2></div>
                 <div className="divide-y divide-[#1e2329] max-h-80 overflow-y-auto">
                   {(data?.topTraders || []).length === 0 ? <p className="p-4 text-gray-500 text-sm text-center">No traders yet</p> : data?.topTraders.map((trader, idx) => (
                     <div key={idx} className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold", idx === 0 ? "bg-yellow-500/20 text-yellow-400" : idx === 1 ? "bg-gray-400/20 text-gray-300" : idx === 2 ? "bg-orange-500/20 text-orange-400" : "bg-[#1e2329] text-gray-500")}>{idx + 1}</div>
-                        <p className="font-mono text-white text-sm">{formatWallet(trader.wallet_address)}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold flex-shrink-0", idx === 0 ? "bg-yellow-500/20 text-yellow-400" : idx === 1 ? "bg-gray-400/20 text-gray-300" : idx === 2 ? "bg-orange-500/20 text-orange-400" : "bg-[#1e2329] text-gray-500")}>{idx + 1}</div>
+                        <p className="font-mono text-white text-xs sm:text-sm truncate">{formatWallet(trader.wallet_address)}</p>
                       </div>
-                      <div className="text-right"><p className="text-sm font-bold text-white">{formatCurrency(trader.total_volume)}</p><p className="text-xs text-gray-500">{formatNumber(trader.total_points)} pts</p></div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <p className="text-xs sm:text-sm font-bold text-white">{formatCurrency(trader.total_volume)}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500">{formatNumber(trader.total_points)} pts</p>
+                      </div>
                     </div>
                   ))}
                 </div>
