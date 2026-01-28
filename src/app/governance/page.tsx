@@ -154,22 +154,22 @@ export default function GovernancePage() {
           <div className="max-w-4xl mx-auto space-y-8">
             
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-[#02c076]/10 border border-[#02c076]/20 rounded-xl">
-                    <Vote className="w-6 h-6 text-[#02c076]" />
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+              <div className="space-y-1 md:space-y-2">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="p-2 bg-[#02c076]/10 border border-[#02c076]/20 rounded-xl">
+                    <Vote className="w-5 h-5 md:w-6 md:h-6 text-[#02c076]" />
                   </div>
-                  <h1 className="text-3xl font-black text-white tracking-tight uppercase italic">Governance Portal</h1>
+                  <h1 className="text-xl md:text-3xl font-black text-white tracking-tight uppercase italic leading-none">Governance</h1>
                 </div>
-                <p className="text-gray-500 text-sm font-medium">
-                  The future of FlipFin is in your hands. Hold FLIP to vote and shape the platform.
+                <p className="text-gray-500 text-[10px] md:text-sm font-medium">
+                  Hold FLIP to vote and shape the platform.
                 </p>
               </div>
               
               <Button 
                 onClick={() => setShowCreate(!showCreate)}
-                className="bg-[#02c076] hover:bg-[#03e28c] text-black font-black uppercase tracking-tighter italic h-12 px-6 rounded-xl shadow-lg shadow-[#02c076]/10 group"
+                className="bg-[#02c076] hover:bg-[#03e28c] text-black font-black uppercase tracking-tighter italic h-10 md:h-12 px-4 md:px-6 rounded-xl shadow-lg shadow-[#02c076]/10 group w-full md:w-auto"
               >
                 <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
                 New Proposal
@@ -177,32 +177,29 @@ export default function GovernancePage() {
             </div>
 
             {/* Wallet Info / Creation Gate */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-5 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <Lock className="w-4 h-4 text-purple-400" />
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Voting Power</span>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-4 md:p-5 backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-2 md:mb-4">
+                  <Lock className="w-3 h-3 text-purple-400" />
+                  <span className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest">Power</span>
                 </div>
-                <p className="text-2xl font-black text-white tracking-tight">{flipBalance.toLocaleString()} <span className="text-[#02c076] text-sm">FLIP</span></p>
-                <p className="text-[10px] text-gray-500 mt-1 font-bold italic">Based on current wallet balance</p>
+                <p className="text-lg md:text-2xl font-black text-white tracking-tight">{flipBalance.toLocaleString()} <span className="text-[#02c076] text-[10px] md:text-sm">FLIP</span></p>
               </div>
 
-              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-5 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <BarChart3 className="w-4 h-4 text-blue-400" />
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Requirement</span>
+              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-4 md:p-5 backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-2 md:mb-4">
+                  <BarChart3 className="w-3 h-3 text-blue-400" />
+                  <span className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest">Goal</span>
                 </div>
-                <p className="text-2xl font-black text-white tracking-tight">{MIN_FLIP_FOR_PROPOSAL.toLocaleString()} <span className="text-blue-400 text-sm">FLIP</span></p>
-                <p className="text-[10px] text-gray-500 mt-1 font-bold italic">Required to create new proposals</p>
+                <p className="text-lg md:text-2xl font-black text-white tracking-tight">10k <span className="text-blue-400 text-[10px] md:text-sm">FLIP</span></p>
               </div>
 
-              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-5 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <Users className="w-4 h-4 text-orange-400" />
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Active Voters</span>
+              <div className="bg-[#1e2329]/40 border border-[#2b3139] rounded-2xl p-4 md:p-5 backdrop-blur-sm col-span-2 md:col-span-1">
+                <div className="flex items-center gap-2 mb-2 md:mb-4">
+                  <Users className="w-3 h-3 text-orange-400" />
+                  <span className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest">Voters</span>
                 </div>
-                <p className="text-2xl font-black text-white tracking-tight">242</p>
-                <p className="text-[10px] text-gray-500 mt-1 font-bold italic">Community members participating</p>
+                <p className="text-lg md:text-2xl font-black text-white tracking-tight">242</p>
               </div>
             </div>
 

@@ -268,32 +268,6 @@ export function Header() {
               <span className="text-xs font-medium text-white">Narratives</span>
             </Link>
 
-            {/* Dynamic Trending Tokens */}
-            <div className="hidden xl:flex items-center gap-2">
-              {trendingTokens.map((token) => (
-                <Link
-                  key={token.address}
-                  href={`/trade/${token.address}`}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors border border-transparent hover:border-[#02c076]/30 group"
-                >
-                  {token.logoURI ? (
-                    <img src={token.logoURI} alt={token.symbol} className="w-3.5 h-3.5 rounded-full" />
-                  ) : (
-                    <TrendingUp className="w-3.5 h-3.5 text-[#02c076]" />
-                  )}
-                  <span className="text-[10px] font-bold text-white group-hover:text-[#02c076]">{token.symbol}</span>
-                  {token.priceChange24h !== undefined && (
-                    <span className={cn(
-                      "text-[9px] font-mono",
-                      token.priceChange24h >= 0 ? "text-[#02c076]" : "text-[#f6465d]"
-                    )}>
-                      {token.priceChange24h >= 0 ? "+" : ""}{token.priceChange24h.toFixed(1)}%
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-
             <Link 
               href="/social"
               className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
@@ -316,13 +290,6 @@ export function Header() {
             <span className="text-xs font-bold text-white tabular-nums">
               {profile?.total_points ? Math.floor(profile.total_points).toLocaleString() : "0"}
             </span>
-          </Link>
-          <Link 
-            href="/tracker"
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-xs font-medium text-white">Track</span>
           </Link>
           <Link 
             href="/portfolio"
@@ -361,12 +328,6 @@ export function Header() {
             className="sm:hidden p-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
           >
             <Trophy className="w-4 h-4 text-yellow-500" />
-          </Link>
-          <Link 
-            href="/tracker"
-            className="md:hidden hidden xs:block p-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
-          >
-            <Eye className="w-4 h-4 text-purple-400" />
           </Link>
           <Link 
             href="/portfolio"
