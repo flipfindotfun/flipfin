@@ -17,13 +17,14 @@ import {
   Eye,
   FileText,
   Coins,
+  Vote,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
   { icon: Zap, label: "Buy FlipFin", href: "/buy" },
   { icon: Search, label: "Explore", href: "/" },
-  { icon: TrendingUp, label: "Trending", href: "/tokens" },
+  { icon: Vote, label: "Governance", href: "/governance" },
   { icon: Coins, label: "Consolidate and Distribute", href: "/wallet/distribution" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
   { icon: Gift, label: "Rewards", href: "/rewards" },
@@ -37,7 +38,7 @@ const navItems = [
 const mobileNavItems = [
   { icon: Zap, label: "Buy $FLIP", href: "/buy" },
   { icon: Search, label: "Explore", href: "/" },
-  { icon: TrendingUp, label: "Trending", href: "/tokens" },
+  { icon: Vote, label: "Governance", href: "/governance" },
   { icon: Coins, label: "Consolidate and Distribute", href: "/wallet/distribution" },
   { icon: LayoutGrid, label: "Portfolio", href: "/portfolio" },
   { icon: Gift, label: "Rewards", href: "/rewards" },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, X, PieChart, Eye, Trophy, Activity, BookOpen, Shield, Flame, TrendingUp } from "lucide-react";
+import { Search, Loader2, X, PieChart, Eye, Trophy, Activity, BookOpen, Shield, Flame, TrendingUp, Vote } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { WalletButton } from "@/components/wallet-button";
@@ -294,12 +294,12 @@ export function Header() {
           >
             <Flame className="w-4 h-4 text-orange-400" />
           </Link>
-          <Link 
-            href="/"
-            className="lg:hidden p-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
-          >
-            <TrendingUp className="w-4 h-4 text-[#02c076]" />
-          </Link>
+            <Link 
+              href="/governance"
+              className="lg:hidden p-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"
+            >
+              <Vote className="w-4 h-4 text-[#02c076]" />
+            </Link>
           <Link 
             href="/narratives"
             className="lg:hidden p-1.5 bg-[#1e2329] rounded-lg hover:bg-[#2b3139] transition-colors"

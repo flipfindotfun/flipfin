@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/buy", icon: Zap, label: "Buy $FLIP" },
   { href: "/", icon: Search, label: "Explore" },
-  { href: "/tokens", icon: TrendingUp, label: "Trending" },
+  { href: "/governance", icon: Vote, label: "Governance" },
   { href: "/wallet/distribution", icon: Coins, label: "Distribute" },
   { href: "/portfolio", icon: PieChart, label: "Portfolio" },
   { href: "/tracker", icon: Eye, label: "Tracker" },
