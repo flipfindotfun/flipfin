@@ -9,6 +9,7 @@ build
 .env.test
 .env.sample
 .env.*.local
+.orchids
 
 # Project specific
 bot/logs
